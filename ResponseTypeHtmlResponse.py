@@ -45,4 +45,4 @@ if __name__ == "__main__":
     # 依然监听 8002 端口
     # host: 监听地址为本地回环地址
     # port: 监听端口为 8002
-    uvicorn.run(app, host="127.0.0.1", port=8002)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

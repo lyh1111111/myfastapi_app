@@ -55,4 +55,4 @@ if __name__ == '__main__':
     # 运行 FastAPI 应用
     # host: 监听地址为本地回环地址
     # port: 监听端口为 8002
-    uvicorn.run(app, host="127.0.0.1", port=8002)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
