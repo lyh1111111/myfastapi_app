@@ -1,0 +1,12 @@
+[project]
+name = "my-fastapi-app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aiomysql>=0.3.2",
+    "fastapi[standard]>=0.135.2",
+    "sqlalchemy>=2.0.48",
+    "uvicorn>=0.42.0",
+]
