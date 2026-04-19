@@ -39,7 +39,7 @@ async def get_file():
     return FileResponse(
         path,
         media_type="image/png",
-        filename="my_photo.png"
+        filename="photo.png"
     )
 
 
