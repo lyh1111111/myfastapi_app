@@ -136,6 +136,8 @@ def main():
     print("实战演练完成！")
     print(f"请查看目录: {result_dir}")
     print("=" * 50)
+    print("=" * 50)
+    print("=" * 50)
 
 
 if __name__ == "__main__":
