@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import DateTime, Integer, String, Date, Float, func
 from sqlalchemy import select
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 
 # 1.创建异步数据库引擎
 engine = create_async_engine(
@@ -19,7 +19,6 @@ engine = create_async_engine(
 )
 
 
-# 2.定义模型类  创建时间和更新时间自动生成
 # 2.定义模型类  创建时间和更新时间自动生成
 class Base(DeclarativeBase):
     # 使用 server_default 告诉 MySQL 数据库在建表时加上默认值
@@ -72,11 +71,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/")
-async def read_root():
-    return {"message": "Hello World"}
-
-
 # 5.创建数据库会话
 Async_session = async_sessionmaker(
         bind=engine, # 绑定引擎
@@ -85,6 +79,7 @@ Async_session = async_sessionmaker(
         autocommit=False, # 自动提交
         autoflush=False # 自动刷新
 )
+
 
 # 6.创建查询依赖项
 async def get_db():
@@ -101,55 +96,77 @@ async def get_db():
             await session.close()
             print("数据库会话已关闭")
 
-# 7.使用依赖项查询所有书籍数据
-@app.get("/books")
-async def get_books(db: AsyncSession = Depends(get_db)):
-    # 查询所有书籍
-    result = await db.execute(select(Book))
-    books = result.scalars().all()
-    return books
 
-# 9.使用依赖项搜索书籍数据（必须在 /books/{book_id} 之前定义）
-@app.get("/books/search_book")
-async def search_book(db: AsyncSession = Depends(get_db)):
-    # 模糊查询书籍
-    result = await db.execute(select(Book).where(Book.title.like("%红%")))
-    books = result.scalars().all()
-    return books
+# 7.添加书籍数据
+@app.post("/books")
+async def add_book(
+    auther: str, 
+    title: str, 
+    published_date: str, 
+    price: float, 
+    description: str, 
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        # 创建新的书籍实例
+        new_book = Book(
+            auther=auther,
+            title=title,
+            published_date=published_date,
+            price=price,
+            description=description
+        )
+        
+        # 添加到会话
+        db.add(new_book)
+        
+        # 提交事务
+        await db.commit()
+        
+        # 刷新以获取生成的ID
+        await db.refresh(new_book)
+        
+        return {
+            "message": "书籍添加成功", 
+            "book_id": new_book.id,
+            "book": new_book
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"添加书籍失败: {str(e)}")
 
-# 10.使用依赖项进行AND查询（作者为'鲁迅'且价格大于30）
-@app.get("/books/query_and")
-async def query_and(db: AsyncSession = Depends(get_db)):
-    # AND查询：作者为'鲁迅'且价格大于30
-    result = await db.execute(select(Book).where(Book.auther == "鲁迅").where(Book.price > 30))
-    books = result.scalars().all()
-    return books
 
-# 11.使用依赖项进行OR查询（作者为'鲁迅'或作者为'曹雪芹'）
-@app.get("/books/query_or")
-async def query_or(db: AsyncSession = Depends(get_db)):
-    # OR查询：作者为'鲁迅'或作者为'曹雪芹'
-    from sqlalchemy import or_
-    result = await db.execute(select(Book).where(or_(Book.auther == "鲁迅", Book.auther == "曹雪芹")))
-    books = result.scalars().all()
-    return books
-
-# 12.使用依赖项进行NOT查询（作者不为'鲁迅'）
-@app.get("/books/query_not")
-async def query_not(db: AsyncSession = Depends(get_db)):
-    # NOT查询：作者不为'鲁迅'
-    from sqlalchemy import not_
-    result = await db.execute(select(Book).where(not_(Book.auther == "鲁迅")))
-    books = result.scalars().all()
-    return books
-
-# 8.使用依赖项查询单本书籍数据
-@app.get("/books/{book_id}")
-async def get_book(book_id: int, db: AsyncSession = Depends(get_db)):
-    # 查询单本书籍
-    result = await db.execute(select(Book).where(Book.id == book_id))
-    book = result.scalars().first()
-    return book
+# 8.批量添加书籍数据
+@app.post("/books/batch")
+async def batch_add_books(
+    books_data: list[dict], 
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        books = []
+        for book_data in books_data:
+            new_book = Book(
+                auther=book_data.get('auther', ''),
+                title=book_data.get('title', ''),
+                published_date=book_data.get('published_date', ''),
+                price=book_data.get('price', 0.0),
+                description=book_data.get('description', '')
+            )
+            books.append(new_book)
+        
+        # 批量添加
+        db.add_all(books)
+        
+        # 提交事务
+        await db.commit()
+        
+        return {
+            "message": f"成功添加 {len(books)} 本书籍",
+            "books": books
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"批量添加书籍失败: {str(e)}")
 
 
 if __name__ == "__main__":
