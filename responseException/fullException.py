@@ -31,58 +31,58 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     print("exc.errors() 返回值:", exc.errors())
     print("exc.errors() 类型:", type(exc.errors()))
     print("=" * 50)
-    
+
     # 解析错误信息
     error_messages = []
-    
+
     for error in exc.errors():
-        field = error.get("loc", [])[-1]        # 字段名
-        error_type = error.get("type", "")       # 错误类型
-        input_value = error.get("input", "")     # 用户输入的值
-        ctx = error.get("ctx", {})               # 上下文（限制值）
-        
+        field = error.get("loc", [])[-1]  # 字段名
+        error_type = error.get("type", "")  # 错误类型
+        input_value = error.get("input", "")  # 用户输入的值
+        ctx = error.get("ctx", {})  # 上下文（限制值）
+
         # 根据错误类型返回中文提示
         if error_type == "less_than":
             limit = ctx.get("lt", "")
             error_messages.append(f"参数 '{field}' 的值 {input_value} 必须小于 {limit}")
-        
+
         elif error_type == "greater_than":
             limit = ctx.get("gt", "")
             error_messages.append(f"参数 '{field}' 的值 {input_value} 必须大于 {limit}")
-        
+
         elif error_type == "less_than_equal":
             limit = ctx.get("le", "")
             error_messages.append(f"参数 '{field}' 的值 {input_value} 必须小于或等于 {limit}")
-        
+
         elif error_type == "greater_than_equal":
             limit = ctx.get("ge", "")
             error_messages.append(f"参数 '{field}' 的值 {input_value} 必须大于或等于 {limit}")
-        
+
         elif error_type == "missing":
             error_messages.append(f"缺少必填参数 '{field}'")
-        
+
         elif error_type == "int_parsing":
             error_messages.append(f"参数 '{field}' 的值 '{input_value}' 必须是有效的整数")
-        
+
         elif error_type == "float_parsing":
             error_messages.append(f"参数 '{field}' 的值 '{input_value}' 必须是有效的数字")
-        
+
         elif error_type == "string_too_short":
             min_len = ctx.get("min_length", "")
             error_messages.append(f"参数 '{field}' 的长度不能少于 {min_len} 个字符")
-        
+
         elif error_type == "string_too_long":
             max_len = ctx.get("max_length", "")
             error_messages.append(f"参数 '{field}' 的长度不能超过 {max_len} 个字符")
-        
+
         elif error_type == "value_error":
             error_msg = error.get("msg", "参数值错误")
             error_messages.append(f"参数 '{field}' {error_msg}")
-        
+
         else:
             # 其他错误类型，使用默认消息
             error_messages.append(error.get("msg", "参数验证失败"))
-    
+
     # 返回统一格式的错误响应
     return JSONResponse(
         status_code=422,

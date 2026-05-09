@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
+
 @app.get("/users/{user_id}")
 async def get_user(user_id: int):
     if user_id != 1:

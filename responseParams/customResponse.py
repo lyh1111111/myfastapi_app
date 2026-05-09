@@ -1,12 +1,9 @@
-
-
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Any, Optional
 
 app = FastAPI()
-
 
 
 class UserResponse(BaseModel):
@@ -47,10 +44,6 @@ async def get_user_with_model(user_id: int):
         "message": "获取成功",
         "data": user
     }
-
-
-
-
 
 
 if __name__ == "__main__":

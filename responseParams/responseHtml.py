@@ -1,4 +1,3 @@
-
 import uvicorn
 import os
 from fastapi import FastAPI, HTTPException
@@ -18,14 +17,14 @@ async def read_root():
     使用 HTMLResponse 返回外部 HTML 文件内容
     """
     file_path = os.path.join(html_dir, "index.html")
-    
+
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="HTML 页面文件不存在")
-    
+
     # 读取 HTML 文件内容
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     return HTMLResponse(content=content)
 
 
@@ -37,7 +36,7 @@ async def simple_html():
     如果文件不存在，返回简单的 HTML 字符串
     """
     file_path = os.path.join(html_dir, "simple.html")
-    
+
     if not os.path.exists(file_path):
         # 文件不存在时，返回默认内容
         return HTMLResponse(
@@ -56,10 +55,10 @@ async def simple_html():
             </html>
             """
         )
-    
+
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     return HTMLResponse(content=content)
 
 
@@ -124,13 +123,13 @@ async def get_html_info():
     返回 HTML 文件的元数据信息
     """
     file_path = os.path.join(html_dir, "index.html")
-    
+
     if not os.path.exists(file_path):
         return {"error": "HTML 文件不存在", "path": file_path}
-    
+
     # 获取文件信息
     stat = os.stat(file_path)
-    
+
     return {
         "file_name": os.path.basename(file_path),
         "file_path": os.path.abspath(file_path),
@@ -139,8 +138,6 @@ async def get_html_info():
         "file_type": "text/html",
         "exists": True
     }
-
-
 
 
 # 启动配置

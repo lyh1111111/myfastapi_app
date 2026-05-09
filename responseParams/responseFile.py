@@ -43,12 +43,13 @@ async def get_photo():
     """
     if not os.path.exists(photo_path):
         return {"error": "文件不存在", "path": photo_path}
-    
+
     return FileResponse(
         path=photo_path,
         media_type="image/png",
         filename="photo.png"
     )
+
 
 if __name__ == '__main__':
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
