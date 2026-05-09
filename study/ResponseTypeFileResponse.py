@@ -25,7 +25,7 @@ async def get_file():
         HTTPException: 当文件不存在时，抛出 404 错误
     """
     # 1. 建议使用相对路径或绝对路径确认文件存在
-    path = "./photo.png"
+    path = "photo.png"
 
     # 2. 增加安全检查：如果文件不存在，返回 404 而不是让服务器崩溃
     if not os.path.exists(path):
