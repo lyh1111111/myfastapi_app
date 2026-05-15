@@ -200,5 +200,152 @@ async def add_animal(name: str, species: str, age: int, owner: str, db: AsyncSes
     await db.refresh(new_animal)
     return new_animal
 
+
+# ... existing code ...
+
+# --- 添加测试数据接口 ---
+# 访问地址示例: POST -> /animals/add?name=旺财&species=狗&age=3&owner=张三
+@app.post("/animals/add", summary="新增动物")
+async def add_animal(name: str, species: str, age: int, owner: str, db: AsyncSession = Depends(get_db)):
+    new_animal = Animals(name=name, species=species, age=age, owner=owner, description="测试数据")
+    db.add(new_animal)
+    await db.commit()
+    await db.refresh(new_animal)
+    return new_animal
+
+
+# ========================= 6. 更新和删除接口 =========================
+
+# --- 完整更新 (PUT) ---
+# 访问地址示例: PUT -> /animals/update/1?name=咪咪&species=猫&age=2&owner=李四&description=可爱的猫咪&is_active=true
+@app.put("/animals/update/{animal_id}", summary="完整更新动物信息")
+async def update_animal(
+        animal_id: int,
+        name: str,
+        species: str,
+        age: int,
+        owner: str,
+        description: Optional[str] = None,
+        is_active: bool = True,
+        db: AsyncSession = Depends(get_db)
+):
+    animal = await db.get(Animals, animal_id)
+    if not animal:
+        raise HTTPException(status_code=404, detail="动物不存在")
+
+    animal.name = name
+    animal.species = species
+    animal.age = age
+    animal.owner = owner
+    animal.description = description
+    animal.is_active = is_active
+
+    await db.commit()
+    await db.refresh(animal)
+    return animal
+
+
+# --- 部分更新 (PATCH) ---
+# 访问地址示例: PATCH -> /animals/partial-update/1?name=小花&age=3
+@app.patch("/animals/partial-update/{animal_id}", summary="部分更新动物信息")
+async def partial_update_animal(
+        animal_id: int,
+        name: Optional[str] = None,
+        species: Optional[str] = None,
+        age: Optional[int] = None,
+        owner: Optional[str] = None,
+        description: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        db: AsyncSession = Depends(get_db)
+):
+    animal = await db.get(Animals, animal_id)
+    if not animal:
+        raise HTTPException(status_code=404, detail="动物不存在")
+
+    if name is not None:
+        animal.name = name
+    if species is not None:
+        animal.species = species
+    if age is not None:
+        animal.age = age
+    if owner is not None:
+        animal.owner = owner
+    if description is not None:
+        animal.description = description
+    if is_active is not None:
+        animal.is_active = is_active
+
+    await db.commit()
+    await db.refresh(animal)
+    return animal
+
+
+# --- 批量更新状态 ---
+# 访问地址示例: PATCH -> /animals/batch-update-status?species=猫&is_active=false
+@app.patch("/animals/batch-update-status", summary="批量更新动物状态")
+async def batch_update_status(
+        species: str,
+        is_active: bool,
+        db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Animals).where(Animals.species == species)
+    result = await db.execute(stmt)
+    animals = result.scalars().all()
+
+    if not animals:
+        raise HTTPException(status_code=404, detail=f"未找到物种为 '{species}' 的动物")
+
+    for animal in animals:
+        animal.is_active = is_active
+
+    await db.commit()
+    return {"message": f"成功更新 {len(animals)} 条记录", "updated_count": len(animals)}
+
+
+# --- 软删除 (标记为非活跃) ---
+# 访问地址示例: DELETE -> /animals/soft-delete/1
+@app.delete("/animals/soft-delete/{animal_id}", summary="软删除动物(标记为非活跃)")
+async def soft_delete_animal(animal_id: int, db: AsyncSession = Depends(get_db)):
+    animal = await db.get(Animals, animal_id)
+    if not animal:
+        raise HTTPException(status_code=404, detail="动物不存在")
+
+    animal.is_active = False
+    await db.commit()
+    return {"message": "动物已标记为删除状态", "animal_id": animal_id}
+
+
+# --- 物理删除 (从数据库彻底删除) ---
+# 访问地址示例: DELETE -> /animals/hard-delete/1
+@app.delete("/animals/hard-delete/{animal_id}", summary="物理删除动物(永久删除)")
+async def hard_delete_animal(animal_id: int, db: AsyncSession = Depends(get_db)):
+    animal = await db.get(Animals, animal_id)
+    if not animal:
+        raise HTTPException(status_code=404, detail="动物不存在")
+
+    await db.delete(animal)
+    await db.commit()
+    return {"message": "动物已永久删除", "animal_id": animal_id}
+
+
+# --- 批量删除 ---
+# 访问地址示例: DELETE -> /animals/batch-delete?species=鸟
+@app.delete("/animals/batch-delete", summary="批量删除动物")
+async def batch_delete_animals(species: str, db: AsyncSession = Depends(get_db)):
+    stmt = select(Animals).where(Animals.species == species)
+    result = await db.execute(stmt)
+    animals = result.scalars().all()
+
+    if not animals:
+        raise HTTPException(status_code=404, detail=f"未找到物种为 '{species}' 的动物")
+
+    deleted_count = len(animals)
+    for animal in animals:
+        await db.delete(animal)
+
+    await db.commit()
+    return {"message": f"成功删除 {deleted_count} 条记录", "deleted_count": deleted_count}
+
+
 if __name__ == '__main__':
     uvicorn.run(app, host="127.0.0.1", port=8000)
