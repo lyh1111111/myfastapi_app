@@ -1,7 +1,7 @@
 # 导入FastAPI框架
 from fastapi import FastAPI
 # 导入新闻路由模块
-from routers import news
+from toutiao_app.routers import news
 
 
 
@@ -21,4 +21,4 @@ if __name__ == '__main__':
     # 导入uvicorn ASGI服务器
     import uvicorn
     # 启动应用，绑定地址127.0.0.1，端口8000
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8001)
