@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse
 app = FastAPI()
 
 # HTML 文件目录
-html_dir = os.path.join(os.path.dirname(__file__), '..', 'file')
+html_dir = os.path.join(os.path.dirname(__file__), '../..', 'file')
 
 
 @app.get("/")

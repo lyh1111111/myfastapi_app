@@ -15,7 +15,7 @@ import uvicorn
 app = FastAPI()
 
 # 文件路径
-file_dir = os.path.join(os.path.dirname(__file__), '..', 'file')
+file_dir = os.path.join(os.path.dirname(__file__), '../..', 'file')
 photo_path = os.path.join(file_dir, 'photo.png')
 
 
