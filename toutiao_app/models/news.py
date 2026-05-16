@@ -1,3 +1,7 @@
+"""
+新闻数据模型定义
+定义新闻分类和新闻内容的数据库表结构
+"""
 from datetime import datetime
 from sqlalchemy import DateTime, Integer, String, Index, Text, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -5,6 +9,7 @@ from sqlalchemy.sql import functions
 
 
 class Base(DeclarativeBase):
+    """基础模型类，提供创建时间和更新时间字段"""
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=functions.now(),
@@ -20,6 +25,7 @@ class Base(DeclarativeBase):
 
 
 class Category(Base):
+    """新闻分类表模型"""
     __tablename__ = "news_category"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="分类ID", )
     name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True, comment="分类名称", )
@@ -30,6 +36,7 @@ class Category(Base):
 
 
 class News(Base):
+    """新闻表模型"""
     __tablename__ = "news"
     # 创建索引
     __table_args__ = (

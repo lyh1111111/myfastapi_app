@@ -1,3 +1,7 @@
+"""
+用户数据模型定义
+定义用户表的数据库结构和字段
+"""
 from datetime import datetime
 from typing import Optional
 
@@ -8,26 +12,30 @@ from sqlalchemy.sql.schema import Index
 
 
 class Base(DeclarativeBase):
-   created_at: Mapped[datetime] = mapped_column(
-       DateTime,
-       server_default=functions.now(),
-       default=functions.now(),
-       comment="创建时间",
-   )
-   updated_at: Mapped[datetime] = mapped_column(
-       DateTime,
-       server_default=functions.now(),
-       onupdate=functions.now(),
-       comment="更新时间",
-   )
+    """
+    基础模型类，提供创建时间和更新时间字段
+    """
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=functions.now(),
+        default=functions.now(),
+        comment="创建时间",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=functions.now(),
+        onupdate=functions.now(),
+        comment="更新时间",
+    )
 
 class User(Base):
+    """用户表模型"""
 
     __tablename__ = "user"
 
     __table_args__ = (
-        Index("username_UNIQUE", "username"),
-        Index("phone_UNIQUE", "phone")
+        Index("username_UNIQUE", "username"),  # 用户名唯一索引
+        Index("phone_UNIQUE", "phone")  # 手机号唯一索引
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="用户ID")
