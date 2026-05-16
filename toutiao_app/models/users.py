@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Enum, Integer, String, DateTime
+from sqlalchemy import Enum, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import functions
 from sqlalchemy.sql.schema import Index
@@ -50,4 +50,32 @@ class User(Base):
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, nickname={self.nickname}, avatar={self.avatar}, gender={self.gender}, bio={self.bio}, phone={self.phone})>"
 
-    
+class UserToken(Base):
+    """用户Token表模型"""
+
+    __tablename__ = "user_token"
+
+    __table_args__ = (
+        Index("token_UNIQUE", "token"),
+        Index("fk_user_token_idx", "user_id")
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="令牌ID")
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"),nullable=False, comment="用户ID")
+    token: Mapped[str] = mapped_column(String(255), nullable=False, comment="令牌值")
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=functions.now(),
+        comment="过期时间",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=functions.now(),
+        default=functions.now(),
+        comment="创建时间",
+    )
+
+    def __repr__(self):
+        return f"<UserToken(id={self.id}, user_id={self.user_id}, token={self.token}, expires_at={self.expires_at}, created_at={self.created_at})>"
