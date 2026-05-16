@@ -2,9 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # 导入新闻路由模块
-from toutiao_app.routers import news
-
-
+from toutiao_app.routers import news, users
 
 # 创建FastAPI应用实例
 app = FastAPI()
@@ -24,6 +22,7 @@ def read_root():
 
 # 注册新闻路由到应用中
 app.include_router(news.router)
+app.include_router(users.router)
 
 
 # 程序入口点
