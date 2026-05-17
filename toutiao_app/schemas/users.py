@@ -22,9 +22,6 @@ class UserUpdateRequest(BaseModel):
     gender: Optional[str] = None
     phone: Optional[str] = None
 
-
-
-
 # 定义用户基础信息模型，包含可选的个人资料字段
 class UserInfoBase(BaseModel):
     # 定义昵称字段，可选，最大长度50字符

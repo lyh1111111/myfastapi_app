@@ -18,16 +18,6 @@ from toutiao_app.utils.security import *
 
 
 async def get_user_by_name(db: AsyncSession, username: str):
-    """
-    根据用户名查询用户
-    
-    Args:
-        db: 数据库会话对象
-        username: 要查询的用户名
-        
-    Returns:
-        返回User对象，如果用户不存在则返回None
-    """
     # 构造SELECT查询语句，筛选username字段等于传入值的记录
     Query = select(User).where(User.username == username)
     # 执行查询并等待结果
@@ -37,16 +27,6 @@ async def get_user_by_name(db: AsyncSession, username: str):
 
 
 async def create_user(db: AsyncSession, user_data: UserRegisterLoginRequest):
-    """
-    创建新用户
-    
-    Args:
-        db: 数据库会话对象
-        user_data: 包含用户名和密码的注册数据
-        
-    Returns:
-        返回创建成功的User对象
-    """
     # 调用密码加密函数，将明文密码转换为哈希值
     hashed_password = hash_password(user_data.password)
     # 创建User实例，设置用户名和加密后的密码
@@ -62,16 +42,6 @@ async def create_user(db: AsyncSession, user_data: UserRegisterLoginRequest):
 
 
 async def creat_token_user(db: AsyncSession, user_id: str):
-    """
-    创建或更新用户认证令牌
-
-    Args:
-        db: 数据库会话对象
-        user_id: 用户ID
-
-    Returns:
-        返回生成的令牌字符串
-    """
     # 生成UUID作为唯一的令牌值
     token = str(uuid.uuid4())
     # 计算令牌过期时间，当前时间加上7天
@@ -100,17 +70,6 @@ async def creat_token_user(db: AsyncSession, user_id: str):
 
 
 async def authenticate_user(db: AsyncSession, username: str, password: str):
-    """
-    验证用户名和密码
-
-    Args:
-        db: 数据库会话对象
-        username: 用户名
-        password: 密码
-
-    Returns:
-        返回验证结果，成功返回User对象，失败返回None
-    """
     # 根据用户名查询用户
     user = await get_user_by_name(db, username)
     # 如果用户不存在，返回None
@@ -135,17 +94,6 @@ async def get_user_by_token(db: AsyncSession, token: str):
     return result.scalar_one_or_none()
 
 async def update_user_info_curd(db: AsyncSession, username: str, user_data: UserUpdateRequest):
-    """
-    更新用户信息
-
-    Args:
-        db: 数据库会话对象
-        user_id: 用户ID
-        user_data: 包含用户信息更新的数据
-
-    Returns:
-        返回更新成功的用户对象
-    """
     # 构造查询语句，查找该用户ID对应的用户记录
     query = update(User).where(User.username == username).values(**user_data.model_dump(
         exclude_unset=True,
