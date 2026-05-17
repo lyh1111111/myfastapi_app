@@ -7,12 +7,14 @@ from datetime import datetime, timedelta
 from sqlalchemy import select, update
 # 导入异步会话类型注解
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.functions import current_user
 from starlette.exceptions import HTTPException
 
 # 导入用户和令牌数据模型
 from toutiao_app.models.users import User, UserToken
 # 导入用户请求数据模式
-from toutiao_app.schemas.users import UserRegisterLoginRequest, UserUpdateRequest
+from toutiao_app.schemas.users import UserRegisterLoginRequest, UserUpdateRequest, UserChangePasswordRequest, \
+    UserInfoResponse
 # 导入密码加密工具函数
 from toutiao_app.utils.security import *
 
@@ -93,6 +95,7 @@ async def get_user_by_token(db: AsyncSession, token: str):
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
+
 async def update_user_info_curd(db: AsyncSession, username: str, user_data: UserUpdateRequest):
     # 构造查询语句，查找该用户ID对应的用户记录
     query = update(User).where(User.username == username).values(**user_data.model_dump(
@@ -102,9 +105,20 @@ async def update_user_info_curd(db: AsyncSession, username: str, user_data: User
     # 执行查询并等待结果
     result = await db.execute(query)
     await db.commit()
-    #检查是否命中数据
+    # 检查是否命中数据
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="User not found")
     # 返回更新成功的用户对象
     update_user = await get_user_by_name(db, username)
     return update_user
+
+
+async def change_password(db: AsyncSession, user: User, old_password: str, new_password: str):
+    if not verify_password(old_password, user.password):
+        return False
+    hashed_new_password = hash_password(new_password)
+    user.password = hashed_new_password
+    db.add(user)
+    await db.commit()
+    db.refresh(user)
+    return True

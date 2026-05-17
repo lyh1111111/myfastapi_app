@@ -11,9 +11,11 @@ from starlette.exceptions import HTTPException
 from toutiao_app.config.db_conf import post_dbs
 # 导入用户相关的CRUD操作函数
 from toutiao_app.curd.users import get_user_by_name, create_user, creat_token_user, authenticate_user
-from toutiao_app.curd.users import update_user_info_curd
+from toutiao_app.curd.users import update_user_info_curd, change_password
 # 导入用户请求和响应数据模式
-from toutiao_app.schemas.users import UserRegisterLoginRequest, UserAuthResponse, UserInfoResponse, UserUpdateRequest
+from toutiao_app.schemas.users import UserRegisterLoginRequest, UserAuthResponse, UserInfoResponse, UserUpdateRequest, UserChangePasswordRequest
+# 导入用户模型
+from toutiao_app.models.users import User
 from toutiao_app.utils.auth import get_current_user
 
 # 导入成功响应工具函数
@@ -55,16 +57,38 @@ async def login(users_data: UserRegisterLoginRequest, db: AsyncSession = Depends
 
 
 @router.get("/info")
-async def get_user_info(user: UserInfoResponse = Depends(get_current_user)):
-    user = UserInfoResponse.model_validate(user)
-    return success_response(data=user)
+async def get_user_info(current_user: User = Depends(get_current_user)):
+
+    # 将ORM对象转换为响应模型，自动过滤敏感字段
+    user_info = UserInfoResponse.model_validate(current_user)
+    return success_response(data=user_info)
 
 
 @router.put("/update")
 async def update_user_info(
         user_data: UserUpdateRequest,
-        current_user: UserInfoResponse = Depends(get_current_user),
+        current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(post_dbs)
 ):
+
+    # 调用CURD层更新用户信息
     updated_user = await update_user_info_curd(db, current_user.username, user_data)
+        
+    # 转换为响应模型并返回
     return success_response(data=UserInfoResponse.model_validate(updated_user))
+
+@router.put("/password")
+async def update_password(
+        password_data: UserChangePasswordRequest,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(post_dbs)
+):
+    res_change_password = await change_password(db, current_user, password_data.oldPassword, password_data.newPassword)
+    if not res_change_password:
+        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="修改密码失败")
+    
+    return success_response(data=True)
+
+
+
+    

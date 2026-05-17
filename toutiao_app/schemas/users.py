@@ -22,6 +22,19 @@ class UserUpdateRequest(BaseModel):
     gender: Optional[str] = None
     phone: Optional[str] = None
 
+class UserChangePasswordRequest(BaseModel):
+    """用户修改密码请求模型"""
+    # 配置Pydantic模型行为
+    model_config = ConfigDict(
+        # 允许通过别名填充字段
+        populate_by_name=True,
+        # 支持从ORM对象（如SQLAlchemy）转换数据
+        from_attributes=True
+    )
+    # 添加必填的字段
+    oldPassword: str = Field(...,description="旧密码")
+    newPassword: str = Field(..., min_length=6,description="新密码")
+
 # 定义用户基础信息模型，包含可选的个人资料字段
 class UserInfoBase(BaseModel):
     # 定义昵称字段，可选，最大长度50字符
@@ -50,12 +63,14 @@ class UserInfoResponse(UserInfoBase):
     id: int
     # 定义用户名字段，必填的字符串类型
     username: str
-    # 定义头像字段，必填的字符串类型
-    avatar: str
-    # 定义简介字段，必填的字符串类型
-    bio: str
-    # 定义性别字段，必填的字符串类型
-    gender: str
+    # 定义昵称字段，可选的字符串类型
+    nickname: Optional[str] = None
+    # 定义头像字段，可选的字符串类型（数据库可为空）
+    avatar: Optional[str] = None
+    # 定义简介字段，可选的字符串类型（数据库可为空）
+    bio: Optional[str] = None
+    # 定义性别字段，可选的字符串类型（数据库可为空）
+    gender: Optional[str] = None
     # 定义手机号字段，可选的字符串类型，默认为None
     phone: Optional[str] = None
 
@@ -74,6 +89,8 @@ class UserAuthResponse(BaseModel):
     token: str
     # 定义用户信息字段，使用Field设置别名为"userInfo"
     userInfo: UserInfoResponse = Field(..., alias="userInfo")
+
+
 
 
     
