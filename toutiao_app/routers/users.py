@@ -10,18 +10,22 @@ from starlette.exceptions import HTTPException
 # 导入数据库会话依赖函数
 from toutiao_app.config.db_conf import post_dbs
 # 导入用户相关的CRUD操作函数
-from toutiao_app.curd.users import get_user_by_name, create_user, creat_token_user
+from toutiao_app.curd.users import get_user_by_name, create_user, creat_token_user, authenticate_user
+from toutiao_app.curd.users import update_user_info_curd
 # 导入用户请求和响应数据模式
-from toutiao_app.schemas.users import UserRequest, UserAuthResponse, UserInfoResponse
+from toutiao_app.schemas.users import UserRegisterLoginRequest, UserAuthResponse, UserInfoResponse, UserUpdateRequest
+from toutiao_app.utils.auth import get_current_user
+
 # 导入成功响应工具函数
 from toutiao_app.utils.response import success_response
 
 # 创建API路由器实例，设置URL前缀为/api/user，标签为users
 router = APIRouter(prefix="/api/user", tags=["users"])
 
+
 # 定义用户注册接口，处理POST请求到/api/user/register
 @router.post("/register")
-async def register(users_data: UserRequest, db: AsyncSession = Depends(post_dbs)):
+async def register(users_data: UserRegisterLoginRequest, db: AsyncSession = Depends(post_dbs)):
     # 根据用户名查询数据库中是否已存在该用户
     exist_user = await get_user_by_name(db, users_data.username)
     # 如果用户已存在，返回400错误
@@ -37,3 +41,30 @@ async def register(users_data: UserRequest, db: AsyncSession = Depends(post_dbs)
     response_data = UserAuthResponse(token=token, userInfo=UserInfoResponse.model_validate(user))
     # 返回统一格式的成功响应，包含token和用户信息
     return success_response(data=response_data)
+
+
+@router.post("/login")
+async def login(users_data: UserRegisterLoginRequest, db: AsyncSession = Depends(post_dbs)):
+    user = await authenticate_user(db, users_data.username, users_data.password)
+    if not user:
+        return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误")
+
+    token = await creat_token_user(db, user.id)
+    response_data = UserAuthResponse(token=token, userInfo=UserInfoResponse.model_validate(user))
+    return success_response(data=response_data)
+
+
+@router.get("/info")
+async def get_user_info(user: UserInfoResponse = Depends(get_current_user)):
+    user = UserInfoResponse.model_validate(user)
+    return success_response(data=user)
+
+
+@router.put("/update")
+async def update_user_info(
+        user_data: UserUpdateRequest,
+        current_user: UserInfoResponse = Depends(get_current_user),
+        db: AsyncSession = Depends(post_dbs)
+):
+    updated_user = await update_user_info_curd(db, current_user.username, user_data)
+    return success_response(data=UserInfoResponse.model_validate(updated_user))

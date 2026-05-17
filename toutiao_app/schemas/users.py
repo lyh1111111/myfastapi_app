@@ -6,12 +6,24 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 # 定义用户注册请求模型，用于接收前端传来的注册数据
-class UserRequest(BaseModel):
+class UserRegisterLoginRequest(BaseModel):
     """用户注册请求模型"""
     # 定义用户名字段，必填的字符串类型
     username: str
     # 定义密码字段，必填的字符串类型
     password: str
+
+class UserUpdateRequest(BaseModel):
+    """用户更新请求模型"""
+    # 配置Pydantic模型的行为
+    nickname: Optional[str] = None
+    bio: Optional[str] = None
+    avatar: Optional[str] = None
+    gender: Optional[str] = None
+    phone: Optional[str] = None
+
+
+
 
 # 定义用户基础信息模型，包含可选的个人资料字段
 class UserInfoBase(BaseModel):
@@ -65,4 +77,7 @@ class UserAuthResponse(BaseModel):
     token: str
     # 定义用户信息字段，使用Field设置别名为"userInfo"
     userInfo: UserInfoResponse = Field(..., alias="userInfo")
+
+
+    
 
