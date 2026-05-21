@@ -14,8 +14,8 @@ router = APIRouter(prefix="/api/news", tags=["news"])
 # 定义获取新闻分类的GET接口，路径为/api/news/categories
 @router.get("/categories")
 async def get_categories(db: AsyncSession = Depends(post_dbs), skip: int = 0, limit: int = 10):
-    # 调用CRUD函数获取分类列表，支持分页参数
-    categories = await news.get_category(db, skip, limit)
+    # 调用CRUD函数获取分类列表支持分页参数
+    categories = await news.get_categories(db, skip, limit)
     # 返回统一格式的响应，包含分类数据
     return {
         "code": 200,
@@ -38,9 +38,9 @@ async def get_news_list(
     # 计算偏移量：(当前页-1) * 每页数量
     offset = (page - 1) * pageSize
     # 调用CRUD函数获取指定分类的新闻列表
-    news_list = await news.get_news(db, categoryId, offset, pageSize)
-    # 调用CRUD函数获取该分类的新闻总数
-    total = await news.get_news_count(db, categoryId)
+    news_list = await news.get_news_list(db, categoryId, offset, pageSize)
+    # 调用CRUD函数统计该分类的新闻总数
+    total = await news.count_news_by_category(db, categoryId)
     # 判断是否还有更多数据：总数 > 已返回的数量
     hasMore = total > offset + pageSize
     # 返回统一格式的响应，包含分页信息和新闻列表
@@ -70,17 +70,17 @@ async def get_news_detail(
     id: int = Query(..., title="新闻ID")
 ):
     # 调用CRUD函数获取新闻详情
-    news_detail = await news.get_news_detail(db, id)
-    # 如果新闻不存在，抛出404异常
+    news_detail = await news.get_news_by_id(db, id)
+    # 如果新闻不存在则抛出404异常
     if not news_detail:
         raise HTTPException(status_code=404, detail="新闻不存在")
-    # 调用CRUD函数更新新闻浏览量（+1）
-    view_res = await news.update_news_views(db, id)
-    # 如果更新失败，抛出500异常
+    # 调用CRUD函数增加新闻浏览量（+1）
+    view_res = await news.increment_news_views(db, id)
+    # 如果更新失败则抛出500异常
     if not view_res:
         raise HTTPException(status_code=500, detail="更新新闻浏览量失败")
     # 调用CRUD函数获取相关新闻列表（同分类的其他新闻）
-    relate_news = await news.get_relate_news(db, id, news_detail.category_id, 5)
+    relate_news = await news.get_related_news(db, id, news_detail.category_id, 5)
     # 返回统一格式的响应，包含新闻详情和相关新闻
     return {
         "code": 200,

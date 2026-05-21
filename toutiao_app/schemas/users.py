@@ -1,94 +1,99 @@
-# 从typing模块导入Optional类型注解，表示字段可以为空
+# 从typing模块导入Optional类型注解表示字段可以为空
 from typing import Optional
 
 # 从Pydantic导入数据验证和序列化相关类
 from pydantic import BaseModel, Field, ConfigDict
 
 
-# 定义用户注册请求模型，用于接收前端传来的注册数据
+# 定义用户注册请求模型用于接收前端传来的注册数据
 class UserRegisterLoginRequest(BaseModel):
-    """用户注册请求模型"""
-    # 定义用户名字段，必填的字符串类型
+    # 定义用户名字段必填的字符串类型
     username: str
-    # 定义密码字段，必填的字符串类型
+    # 定义密码字段必填的字符串类型
     password: str
 
+# 定义用户更新请求模型
 class UserUpdateRequest(BaseModel):
-    """用户更新请求模型"""
-    # 配置Pydantic模型的行为
+    # 定义昵称字段可选
     nickname: Optional[str] = None
+    # 定义个人简介字段可选
     bio: Optional[str] = None
+    # 定义头像URL字段可选
     avatar: Optional[str] = None
+    # 定义性别字段可选
     gender: Optional[str] = None
+    # 定义手机号字段可选
     phone: Optional[str] = None
 
+# 定义用户修改密码请求模型
 class UserChangePasswordRequest(BaseModel):
-    """用户修改密码请求模型"""
     # 配置Pydantic模型行为
     model_config = ConfigDict(
         # 允许通过别名填充字段
         populate_by_name=True,
-        # 支持从ORM对象（如SQLAlchemy）转换数据
+        # 支持从ORM对象如SQLAlchemy转换数据
         from_attributes=True
     )
-    # 添加必填的字段
+    # 定义旧密码字段必填
     oldPassword: str = Field(...,description="旧密码")
+    # 定义新密码字段必填且最小长度为6
     newPassword: str = Field(..., min_length=6,description="新密码")
 
-# 定义用户基础信息模型，包含可选的个人资料字段
+# 定义用户基础信息模型包含可选的个人资料字段
 class UserInfoBase(BaseModel):
-    # 定义昵称字段，可选，最大长度50字符
+    # 定义昵称字段可选最大长度50字符
     nickname: Optional[str] = Field(None, max_length=50, description="昵称")
-    # 定义个人简介字段，可选，最大长度500字符
+    # 定义个人简介字段可选最大长度500字符
     bio: Optional[str] = Field(None, max_length=500, description="个人简介")
-    # 定义头像URL字段，可选，最大长度255字符
+    # 定义头像URL字段可选最大长度255字符
     avatar: Optional[str] = Field(None, max_length=255, description="头像")
-    # 定义性别字段，可选，最大长度10字符
+    # 定义性别字段可选最大长度10字符
     gender: Optional[str] = Field(None, max_length=10, description="性别")
-    # 定义手机号字段，可选，最大长度11字符
+    # 定义手机号字段可选最大长度11字符
     phone: Optional[str] = Field(None, max_length=11, description="手机号")
 
 
-# 定义用户信息响应模型，继承自UserInfoBase并添加必填字段
+# 定义用户信息响应模型继承自UserInfoBase并添加必填字段
 class UserInfoResponse(UserInfoBase):
     # 配置Pydantic模型的行为
     model_config = ConfigDict(
         # 允许通过别名填充字段
         populate_by_name=True,
-        # 支持从ORM对象（如SQLAlchemy）转换数据
+        # 支持从ORM对象如SQLAlchemy转换数据
         from_attributes=True
     )
-    """用户响应模型"""
-    # 定义用户ID字段，必填的整数类型
+    # 定义用户ID字段必填的整数类型
     id: int
-    # 定义用户名字段，必填的字符串类型
+    # 定义用户名字段必填的字符串类型
     username: str
-    # 定义昵称字段，可选的字符串类型
+    # 定义昵称字段可选的字符串类型
     nickname: Optional[str] = None
-    # 定义头像字段，可选的字符串类型（数据库可为空）
+    # 定义头像字段可选的字符串类型数据库可为空
     avatar: Optional[str] = None
-    # 定义简介字段，可选的字符串类型（数据库可为空）
+    # 定义简介字段可选的字符串类型数据库可为空
     bio: Optional[str] = None
-    # 定义性别字段，可选的字符串类型（数据库可为空）
+    # 定义性别字段可选的字符串类型数据库可为空
     gender: Optional[str] = None
-    # 定义手机号字段，可选的字符串类型，默认为None
+    # 定义手机号字段可选的字符串类型默认为None
     phone: Optional[str] = None
 
 
-# 定义用户认证响应模型，包含token和用户信息
+# 定义用户认证响应模型包含token和用户信息
 class UserAuthResponse(BaseModel):
     # 配置Pydantic模型的行为
     model_config = ConfigDict(
         # 允许通过别名填充字段
         populate_by_name=True,
-        # 支持从ORM对象（如SQLAlchemy）转换数据
+        # 支持从ORM对象如SQLAlchemy转换数据
         from_attributes=True
     )
-    """用户响应模型"""
-    # 定义认证令牌字段，必填的字符串类型
+    # 定义认证令牌字段必填的字符串类型
     token: str
-    # 定义用户信息字段，使用Field设置别名为"userInfo"
+    # 定义用户信息字段使用Field设置别名为userInfo
     userInfo: UserInfoResponse = Field(..., alias="userInfo")
+
+
+
 
 
 

@@ -3,13 +3,14 @@ from fastapi import FastAPI
 # 导入CORS中间件，用于处理跨域请求
 from fastapi.middleware.cors import CORSMiddleware
 # 导入新闻和用户路由模块，定义API端点
-from toutiao_app.routers import news, users
+from toutiao_app.routers import news, users, favorite, history
+# 导入全局异常处理器注册函数
 from toutiao_app.utils.exception import register_exceptions
 
 # 创建FastAPI应用实例，作为整个应用的入口
 app = FastAPI()
 
-# 1/配置CORS（跨域资源共享）中间件
+# 配置CORS（跨域资源共享）中间件
 app.add_middleware(
     # 使用CORSMiddleware处理跨域请求
     CORSMiddleware,
@@ -24,13 +25,8 @@ app.add_middleware(
 )
 
 
-#2/注册全局异常处理器
+# 注册全局异常处理器
 register_exceptions(app)
-# 如果你需要测试异常，可以在这里写一个测试路由
-# @app.get("/test-error")
-# async def test_error():
-#     # 模拟抛出全局通用异常，看它是否能被 general_exception_handler 正确捕获
-#     raise ValueError("这这是一个故意抛出的测试错误")
 
 # 定义根路径（/）的GET请求处理函数
 @app.get("/")
@@ -42,6 +38,10 @@ def read_root():
 app.include_router(news.router)
 # 注册用户路由到应用中，使/api/user下的端点生效
 app.include_router(users.router)
+# 注册收藏路由到应用中，使/api/favorite下的端点生效
+app.include_router(favorite.router)
+# 注册历史记录路由到应用中，使/api/history下的端点生效
+app.include_router(history.router)
 
 # Python程序入口点，仅在直接运行此文件时执行
 if __name__ == '__main__':
