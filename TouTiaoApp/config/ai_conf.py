@@ -7,7 +7,7 @@ AI_CHAT_CONFIG = {
     "api_endpoint": "https://api.deepseek.com/v1/chat/completions",
     
     # API Key (敏感信息，不要提交到版本控制)
-    "api_key": "xxxx",
+    "api_key": "xxxxxxxx",
     
     # 使用的模型
     "model": "deepseek-chat",
