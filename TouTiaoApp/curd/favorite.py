@@ -4,8 +4,8 @@ from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 导入收藏和新闻模型
-from toutiao_app.models.favorite import Favorite
-from toutiao_app.models.news import News
+from TouTiaoApp.models.favorite import Favorite
+from TouTiaoApp.models.news import News
 
 
 # 定义判断用户是否收藏了新闻的函数

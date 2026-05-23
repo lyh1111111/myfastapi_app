@@ -5,7 +5,7 @@ from typing import Optional, Any
 # 导入FastAPI的JSON编码器，用于序列化ORM对象
 from fastapi.encoders import jsonable_encoder
 # 导入Redis客户端实例和缓存过期时间配置
-from toutiao_app.config.cache_conf import redis_client, NEWS_CACHE_TTL
+from TouTiaoApp.config.cache_conf import redis_client, NEWS_CACHE_TTL
 
 
 async def get_categories_from_cache() -> Optional[Any]:

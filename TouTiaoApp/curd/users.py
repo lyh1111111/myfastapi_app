@@ -13,12 +13,12 @@ from sqlalchemy.sql.functions import current_user
 from starlette.exceptions import HTTPException
 
 # 导入用户和令牌数据模型
-from toutiao_app.models.users import User, UserToken
+from TouTiaoApp.models.users import User, UserToken
 # 导入用户请求和响应数据模式
-from toutiao_app.schemas.users import UserRegisterLoginRequest, UserUpdateRequest, UserChangePasswordRequest, \
+from TouTiaoApp.schemas.users import UserRegisterLoginRequest, UserUpdateRequest, UserChangePasswordRequest, \
     UserInfoResponse
 # 导入密码加密工具函数
-from toutiao_app.utils.security import *
+from TouTiaoApp.utils.security import *
 
 
 # 根据用户名查询用户的函数

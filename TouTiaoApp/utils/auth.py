@@ -6,11 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 # 导入数据库会话依赖
-from toutiao_app.config.db_conf import post_dbs
+from TouTiaoApp.config.db_conf import post_dbs
 # 导入根据token获取用户的函数
-from toutiao_app.curd.users import get_user_by_token
+from TouTiaoApp.curd.users import get_user_by_token
 # 导入用户模型
-from toutiao_app.models.users import User
+from TouTiaoApp.models.users import User
 
 
 # 定义获取当前用户的依赖注入函数

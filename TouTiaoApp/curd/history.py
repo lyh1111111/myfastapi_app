@@ -4,8 +4,8 @@ from sqlalchemy import func, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 导入历史记录和新闻模型
-from toutiao_app.models.history import History
-from toutiao_app.models.news import News
+from TouTiaoApp.models.history import History
+from TouTiaoApp.models.news import News
 
 
 # 定义添加浏览记录的函数

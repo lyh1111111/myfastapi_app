@@ -40,4 +40,4 @@ node_modules/
 .env.*
 
 # AI Configuration (contains API Keys)
-toutiao_app/config/ai_conf.py
+TouTiaoApp/config/ai_conf.py

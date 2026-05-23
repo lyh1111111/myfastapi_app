@@ -390,10 +390,10 @@ REDIS_URL = "redis://:密码@主机:端口/数据库编号"
 
 ```bash
 # 开发环境
-uvicorn toutiao_app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn TouTiaoApp.main:app --reload --host 0.0.0.0 --port 8000
 
 # 生产环境
-uvicorn toutiao_app.main:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn TouTiaoApp.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 ### 前端部署
@@ -463,7 +463,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN pip install uv && uv sync --frozen
 
-COPY toutiao_app ./toutiao_app
+COPY TouTiaoApp ./toutiao_app
 
 EXPOSE 8000
 

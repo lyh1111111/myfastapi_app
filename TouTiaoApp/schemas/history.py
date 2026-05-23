@@ -7,7 +7,7 @@ from typing import List
 from pydantic import BaseModel, Field, ConfigDict
 
 # 导入新闻基础信息模型
-from toutiao_app.schemas.BaseNewsItem import NewsItemBase
+from TouTiaoApp.schemas.BaseNewsItem import NewsItemBase
 
 
 # 定义添加浏览记录请求模型

@@ -3,7 +3,7 @@ from sqlalchemy import select, func, update
 # 导入异步会话类型注解
 from sqlalchemy.ext.asyncio import AsyncSession
 # 导入新闻数据模型（Category和News）
-from toutiao_app.models.news import *
+from TouTiaoApp.models.news import *
 
 
 # 获取新闻分类列表的函数

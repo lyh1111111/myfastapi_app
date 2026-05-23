@@ -4,18 +4,18 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 导入数据库会话依赖函数
-from toutiao_app.config.db_conf import post_dbs
+from TouTiaoApp.config.db_conf import post_dbs
 # 导入历史记录相关的CRUD操作函数
-from toutiao_app.curd.history import add_history, get_user_history_list, remove_history, \
+from TouTiaoApp.curd.history import add_history, get_user_history_list, remove_history, \
     clear_history
 # 导入用户模型
-from toutiao_app.models.users import User
+from TouTiaoApp.models.users import User
 # 导入历史记录请求和响应数据模式
-from toutiao_app.schemas.history import HistoryAddRequest, HistoryListResponse, HistoryNewItemResponse
+from TouTiaoApp.schemas.history import HistoryAddRequest, HistoryListResponse, HistoryNewItemResponse
 # 导入获取当前用户的依赖函数
-from toutiao_app.utils.auth import get_current_user
+from TouTiaoApp.utils.auth import get_current_user
 # 导入成功响应工具函数
-from toutiao_app.utils.response import success_response
+from TouTiaoApp.utils.response import success_response
 
 # 创建API路由器实例，设置URL前缀为/api/history，标签为history
 router = APIRouter(prefix="/api/history",tags=["history"])

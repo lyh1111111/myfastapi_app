@@ -3,9 +3,9 @@ from fastapi import FastAPI
 # 导入CORS中间件，用于处理跨域请求
 from fastapi.middleware.cors import CORSMiddleware
 # 导入新闻和用户路由模块，定义API端点
-from toutiao_app.routers import news, users, favorite, history, ai_chat
+from TouTiaoApp.routers import news, users, favorite, history, ai_chat
 # 导入全局异常处理器注册函数
-from toutiao_app.utils.exception import register_exceptions
+from TouTiaoApp.utils.exception import register_exceptions
 
 # 创建FastAPI应用实例，作为整个应用的入口
 app = FastAPI()

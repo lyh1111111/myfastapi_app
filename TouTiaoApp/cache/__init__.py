@@ -1,5 +1,5 @@
 # 导入新闻缓存操作函数
-from toutiao_app.cache.news_cache import (
+from TouTiaoApp.cache.news_cache import (
     get_categories_from_cache,
     set_categories_to_cache,
     get_news_list_from_cache,

@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 导入数据库会话依赖函数
-from toutiao_app.config.db_conf import post_dbs
+from TouTiaoApp.config.db_conf import post_dbs
 # 导入新闻相关的CRUD操作模块
-from toutiao_app.curd import news
+from TouTiaoApp.curd import news
 # 导入新闻缓存操作函数
-from toutiao_app.cache.news_cache import (
+from TouTiaoApp.cache.news_cache import (
     get_categories_from_cache,
     set_categories_to_cache,
     get_news_list_from_cache,

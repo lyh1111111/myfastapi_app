@@ -8,19 +8,19 @@ from starlette import status
 from starlette.exceptions import HTTPException
 
 # 导入数据库会话依赖函数
-from toutiao_app.config.db_conf import post_dbs
+from TouTiaoApp.config.db_conf import post_dbs
 # 导入用户相关的CRUD操作函数
-from toutiao_app.curd.users import get_user_by_username, create_user, create_user_token, authenticate_user
-from toutiao_app.curd.users import update_user_info, change_password
+from TouTiaoApp.curd.users import get_user_by_username, create_user, create_user_token, authenticate_user
+from TouTiaoApp.curd.users import update_user_info, change_password
 # 导入用户请求和响应数据模式
-from toutiao_app.schemas.users import UserRegisterLoginRequest, UserAuthResponse, UserInfoResponse, UserUpdateRequest, UserChangePasswordRequest
+from TouTiaoApp.schemas.users import UserRegisterLoginRequest, UserAuthResponse, UserInfoResponse, UserUpdateRequest, UserChangePasswordRequest
 # 导入用户模型
-from toutiao_app.models.users import User
+from TouTiaoApp.models.users import User
 # 导入获取当前用户的依赖函数
-from toutiao_app.utils.auth import get_current_user
+from TouTiaoApp.utils.auth import get_current_user
 
 # 导入成功响应工具函数
-from toutiao_app.utils.response import success_response
+from TouTiaoApp.utils.response import success_response
 
 # 创建API路由器实例设置URL前缀为/api/user标签为users
 router = APIRouter(prefix="/api/user", tags=["users"])

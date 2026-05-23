@@ -7,9 +7,9 @@ from fastapi.responses import StreamingResponse
 # 导入 Pydantic 模型基类，用于数据验证
 from pydantic import BaseModel
 # 导入全局响应封装工具
-from toutiao_app.utils.response import success_response, fail_response
+from TouTiaoApp.utils.response import success_response, fail_response
 # 导入 AI 配置文件
-from toutiao_app.config.ai_conf import AI_CHAT_CONFIG
+from TouTiaoApp.config.ai_conf import AI_CHAT_CONFIG
 
 # 创建 AI 路由实例
 router = APIRouter(prefix="/api/ai", tags=["AI问答"])
