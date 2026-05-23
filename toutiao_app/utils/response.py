@@ -18,3 +18,30 @@ def success_response(data=None, message="success"):
     }
     # 使用jsonable_encoder处理数据（如datetime对象），并返回JSON响应
     return JSONResponse(content=jsonable_encoder(content))
+
+
+# 定义失败响应函数，统一返回格式
+
+def fail_response(code=500, msg="error", data=None):
+    """
+    失败响应函数
+    
+    参数：
+    - code: 错误状态码（默认500）
+    - msg: 错误提示信息（默认"error"）
+    - data: 额外数据（可选）
+    
+    返回：
+    - JSONResponse 对象
+    """
+    # 构造响应内容字典
+    content = {
+        # 错误状态码
+        "code": code,
+        # 错误提示信息
+        "message": msg,
+        # 额外数据（如果有）
+        "data": data
+    }
+    # 使用jsonable_encoder处理数据，并返回JSON响应
+    return JSONResponse(content=jsonable_encoder(content))

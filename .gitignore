@@ -38,3 +38,6 @@ node_modules/
 # Environment
 .env
 .env.*
+
+# AI Configuration (contains API Keys)
+toutiao_app/config/ai_conf.py

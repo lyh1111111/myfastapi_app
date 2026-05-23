@@ -1,13 +1,13 @@
 <template>
   <div class="ai-chat-container">
     <van-nav-bar title="AI问答" fixed />
-    
+
     <div class="chat-content">
       <div class="messages-container" ref="messagesContainer">
-        <div 
-          v-for="(message, index) in messages" 
-          :key="index" 
-          :class="['message', message.role === 'user' ? 'user-message' : 'ai-message']"
+        <div
+            v-for="(message, index) in messages"
+            :key="index"
+            :class="['message', message.role === 'user' ? 'user-message' : 'ai-message']"
         >
           <div class="message-content">
             <div v-if="message.role === 'assistant' && message.content === ''" class="typing-indicator">
@@ -19,28 +19,39 @@
           </div>
         </div>
       </div>
-      
+
+      <div class="chat-options">
+        <label class="option-label" style="display: flex; align-items: center; cursor: pointer; color: #666; font-size: 13px;">
+          <input
+              type="checkbox"
+              v-model="isStreaming"
+              style="margin-right: 6px; width: 16px; height: 16px; cursor: pointer;"
+          />
+          开启流式响应 (打字机效果)
+        </label>
+      </div>
+
       <div class="input-container">
         <van-field
-          v-model="userInput"
-          rows="1"
-          autosize
-          type="textarea"
-          placeholder="请输入问题..."
-          class="chat-input"
-          @keypress.enter.prevent="sendMessage"
+            v-model="userInput"
+            rows="1"
+            autosize
+            type="textarea"
+            placeholder="请输入问题..."
+            class="chat-input"
+            @keypress.enter.prevent="sendMessage"
         />
-        <van-button 
-          type="primary" 
-          class="send-button" 
-          :disabled="isLoading || !userInput.trim()" 
-          @click="sendMessage"
+        <van-button
+            type="primary"
+            class="send-button"
+            :disabled="isLoading || !userInput.trim()"
+            @click="sendMessage"
         >
           发送
         </van-button>
       </div>
     </div>
-    
+
     <tab-bar />
   </div>
 </template>
@@ -61,48 +72,37 @@ const userInput = ref('');
 const messagesContainer = ref(null);
 const isLoading = ref(false);
 
+// 控制是否开启流式响应的变量，默认开启(true)
+const isStreaming = ref(true);
+
 // 从配置文件获取API设置
-const apiEndpoint = ref(aiChatConfig.apiEndpoint);
-const apiKey = ref(aiChatConfig.apiKey);
-const model = ref(aiChatConfig.model);
+const chatEndpoint = ref(aiChatConfig.chatEndpoint);
 
 // 格式化消息内容（支持Markdown）
 const formatMessage = (content) => {
   if (!content) return '';
-  // 使用marked解析Markdown，并用DOMPurify清理HTML
   return DOMPurify.sanitize(marked.parse(content));
 };
 
 // 发送消息
 const sendMessage = async () => {
   if (!userInput.value.trim() || isLoading.value) return;
-  
-  // 检查API设置
-  if (!apiKey.value || apiKey.value === 'your-api-key-here') {
-    showToast('API Key未配置，请联系管理员');
-    return;
-  }
-  
-  // 添加用户消息
+
   const userMessage = userInput.value.trim();
   messages.value.push({ role: 'user', content: userMessage });
   userInput.value = '';
-  
-  // 添加AI消息占位
+
   messages.value.push({ role: 'assistant', content: '' });
-  
-  // 滚动到底部
+
   await nextTick();
   scrollToBottom();
-  
-  // 发送请求
+
   isLoading.value = true;
   try {
     await fetchAIResponse(userMessage);
   } catch (error) {
     console.error('Error fetching AI response:', error);
-    // 更新最后一条消息为错误信息
-    messages.value[messages.value.length - 1].content = `发生错误: ${error.message || '请检查网络连接和API设置'}`;
+    messages.value[messages.value.length - 1].content = `发生错误: ${error.message || '请检查网络连接和后端服务'}`;
   } finally {
     isLoading.value = false;
     await nextTick();
@@ -110,78 +110,93 @@ const sendMessage = async () => {
   }
 };
 
-// 获取AI响应（使用SSE）
+// 获取AI响应
 const fetchAIResponse = async (userMessage) => {
-  const allMessages = messages.value
-    .slice(0, -1) // 排除最后一个空的assistant消息
-    .map(msg => ({ role: msg.role, content: msg.content }));
-  
+  const historyMessages = messages.value
+      .slice(0, -1)
+      .map(msg => ({ role: msg.role, content: msg.content }));
+
   try {
-    const response = await fetch(apiEndpoint.value, {
+    const response = await fetch(chatEndpoint.value, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey.value}`,
-        'X-DashScope-SSE': 'enable' // 添加阿里云DashScope所需的SSE头
       },
       body: JSON.stringify({
-        model: model.value,
-        messages: allMessages,
-        stream: true
+        message: userMessage,
+        history: historyMessages,
+        stream: isStreaming.value // 动态读取上方开关的状态
       })
     });
-    
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error?.message || `HTTP error! status: ${response.status}`);
+      throw new Error(error.message || `HTTP error! status: ${response.status}`);
     }
-    
-    // 处理SSE流
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let aiResponse = '';
-  
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') continue;
-        
-        try {
-          const json = JSON.parse(data);
-          // 适配阿里云DashScope的返回格式
-          const content = json.choices?.[0]?.delta?.content || 
-                         json.output?.text || 
-                         json.choices?.[0]?.message?.content || '';
-          if (content) {
-            aiResponse += content;
-            // 更新最后一条消息
-            messages.value[messages.value.length - 1].content = aiResponse;
-            await nextTick();
-            scrollToBottom();
-          }
-        } catch (e) {
-          console.error('Error parsing SSE data:', e);
-        }
+
+    const contentType = response.headers.get('content-type');
+
+    // 如果响应头是事件流，则走流式处理
+    if (contentType && contentType.includes('text/event-stream')) {
+      await handleStreamResponse(response);
+    } else {
+      // 否则走非流式一次性返回处理
+      const data = await response.json();
+
+      if (data.code === 200 && data.data?.reply) {
+        messages.value[messages.value.length - 1].content = data.data.reply;
+      } else {
+        messages.value[messages.value.length - 1].content = data.message || 'AI 回复失败';
       }
     }
-  }
-  
-  // 如果没有收到任何内容
-  if (!aiResponse) {
-    messages.value[messages.value.length - 1].content = '抱歉，我无法生成回复。请检查API设置或稍后再试。';
-  }
   } catch (error) {
     console.error('Fetch error:', error);
     throw error;
+  }
+};
+
+// 处理流式响应(SSE)
+const handleStreamResponse = async (response) => {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let aiResponse = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const json = JSON.parse(data);
+            const content = json.choices?.[0]?.delta?.content || '';
+            if (content) {
+              aiResponse += content;
+              messages.value[messages.value.length - 1].content = aiResponse;
+              await nextTick();
+              scrollToBottom();
+            }
+          } catch (e) {
+            console.error('Error parsing SSE data:', e);
+          }
+        }
+      }
+    }
+
+    if (!aiResponse) {
+      messages.value[messages.value.length - 1].content = '抱歉，我无法生成回复。请稍后再试。';
+    }
+  } finally {
+    reader.releaseLock();
   }
 };
 
@@ -192,12 +207,10 @@ const scrollToBottom = () => {
   }
 };
 
-// 监听消息变化，自动滚动
 watch(messages, () => {
   nextTick(scrollToBottom);
 }, { deep: true });
 
-// 组件挂载时滚动到底部
 onMounted(() => {
   scrollToBottom();
 });
@@ -218,6 +231,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background-color: #f7f8fa;
 }
 
 .messages-container {
@@ -248,23 +262,36 @@ onMounted(() => {
 .user-message .message-content {
   background-color: #007aff;
   color: white;
+  border-bottom-right-radius: 2px;
 }
 
 .ai-message .message-content {
-  background-color: #f2f2f2;
+  background-color: #fff;
   color: #333;
+  border-bottom-left-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* 选项工具栏样式 */
+.chat-options {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  background-color: #fff;
+  border-top: 1px solid #eee;
 }
 
 .input-container {
   display: flex;
   padding: 10px;
-  border-top: 1px solid #eee;
   background-color: #fff;
 }
 
 .chat-input {
   flex: 1;
   margin-right: 10px;
+  border: 1px solid #eee;
+  border-radius: 4px;
 }
 
 .send-button {
@@ -322,7 +349,7 @@ onMounted(() => {
   }
 }
 
-/* Markdown样式 */
+/* Markdown样式覆盖 */
 :deep(pre) {
   background-color: #f0f0f0;
   padding: 10px;

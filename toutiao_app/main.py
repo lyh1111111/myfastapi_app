@@ -3,7 +3,7 @@ from fastapi import FastAPI
 # 导入CORS中间件，用于处理跨域请求
 from fastapi.middleware.cors import CORSMiddleware
 # 导入新闻和用户路由模块，定义API端点
-from toutiao_app.routers import news, users, favorite, history
+from toutiao_app.routers import news, users, favorite, history, ai_chat
 # 导入全局异常处理器注册函数
 from toutiao_app.utils.exception import register_exceptions
 
@@ -42,6 +42,8 @@ app.include_router(users.router)
 app.include_router(favorite.router)
 # 注册历史记录路由到应用中，使/api/history下的端点生效
 app.include_router(history.router)
+# 注册AI问答路由到应用中，使/api/ai下的端点生效
+app.include_router(ai_chat.router)
 
 # Python程序入口点，仅在直接运行此文件时执行
 if __name__ == '__main__':

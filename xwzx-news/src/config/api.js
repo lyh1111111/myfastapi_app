@@ -9,13 +9,14 @@ export const apiConfig = {
   baseURL: 'http://127.0.0.1:8000',
 }
 
+// AI 问答功能配置（已迁移到后端，仅保留接口路径）
 export const aiChatConfig = {
-  // OpenAI API地址
-  apiEndpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+  // 后端 AI 问答接口地址（流式）
+  chatEndpoint: `${apiConfig.baseURL}/api/ai/chat`,
   
-  // API Key (由开发人员指定)
-  apiKey: 'sk-54ac3e6eaf4941289cdbcaaa0e418df3',
+  // 非流式接口地址（备用）
+  nonStreamEndpoint: `${apiConfig.baseURL}/api/ai/chat/non-stream`,
   
-  // 使用的模型
-  model: 'qwen3-max-preview'
+  // 是否使用流式输出
+  useStream: true,
 }
