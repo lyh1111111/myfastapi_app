@@ -157,6 +157,7 @@ const fetchAIResponse = async (userMessage) => {
 
 // 处理流式响应(SSE)
 const handleStreamResponse = async (response) => {
+  console.log('>>> 开始处理流式响应');
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -165,19 +166,31 @@ const handleStreamResponse = async (response) => {
   try {
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        console.log('>>> 流式响应结束');
+        break;
+      }
 
-      buffer += decoder.decode(value, { stream: true });
+      const chunk = decoder.decode(value, { stream: true });
+      console.log('>>> 收到原始chunk:', chunk.substring(0, 100));
+      
+      buffer += chunk;
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
 
       for (const line of lines) {
+        console.log('>>> 处理行:', line);
         if (line.startsWith('data: ')) {
           const data = line.slice(6);
-          if (data === '[DONE]') continue;
+          console.log('>>> SSE数据:', data);
+          if (data === '[DONE]') {
+            console.log('>>> 收到[DONE]标记');
+            continue;
+          }
 
           try {
             const json = JSON.parse(data);
+            console.log('>>> 解析JSON成功:', json);
             const content = json.choices?.[0]?.delta?.content || '';
             if (content) {
               aiResponse += content;
@@ -186,14 +199,17 @@ const handleStreamResponse = async (response) => {
               scrollToBottom();
             }
           } catch (e) {
-            console.error('Error parsing SSE data:', e);
+            console.error('Error parsing SSE data:', e, '原始数据:', data);
           }
         }
       }
     }
 
     if (!aiResponse) {
+      console.warn('>>> 没有收到任何AI回复内容');
       messages.value[messages.value.length - 1].content = '抱歉，我无法生成回复。请稍后再试。';
+    } else {
+      console.log('>>> AI回复完成，总长度:', aiResponse.length);
     }
   } finally {
     reader.releaseLock();
