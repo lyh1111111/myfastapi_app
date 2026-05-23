@@ -50,12 +50,12 @@ Toutiao App 是一个基于 FastAPI + Vue3 的全栈新闻资讯平台，提供�
 
 ```
 myfastapi_app/
-├── toutiao_app/              # 后端项目根目录
+├── TouTiaoApp/              # 后端项目根目录
 │   ├── main.py               # FastAPI 应用入口
 │   ├── config/               # 配置模块
 │   │   ├── db_conf.py        # 数据库配置（MySQL）
 │   │   ├── cache_conf.py     # Redis 缓存配置
-│   │   ── ai_conf.py        # AI 服务配置
+│   │   └── ai_conf.py        # AI 服务配置
 │   ├── models/               # SQLAlchemy 数据模型
 │   │   ├── users.py          # 用户和令牌模型
 │   │   ├── news.py           # 新闻和分类模型
@@ -83,7 +83,8 @@ myfastapi_app/
 │   │   ├── auth.py           # JWT Token 认证
 │   │   ├── security.py       # 密码加密/验证
 │   │   ├── response.py       # 统一响应格式
-│   │   └── exception.py      # 全局异常处理
+│   │   ├── exception.py      # 全局异常处理
+│   │   └── log_utils.py      # API 日志工具
 │   └── __init__.py
 │
 ├── xwzx-news/                # 前端项目根目录
@@ -98,6 +99,7 @@ myfastapi_app/
 │   │   │   ├── History.vue   # 历史页
 │   │   │   ├── AIChat.vue    # AI 问答页
 │   │   │   ├── My.vue        # 个人中心
+│   │   │   ├── Profile.vue   # 个人资料
 │   │   │   └── Settings.vue  # 设置页
 │   │   ├── components/       # 公共组件
 │   │   │   ├── TabBar.vue    # 底部导航栏
@@ -128,50 +130,58 @@ myfastapi_app/
 
 ### MySQL 表结构
 
-#### 1. 用户表 (users)
+#### 1. 用户表 (user)
 
 ```sql
-CREATE TABLE users (
-    id VARCHAR(36) PRIMARY KEY,
+CREATE TABLE user (
+    id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    avatar VARCHAR(255),
     nickname VARCHAR(50),
-    bio TEXT,
+    avatar VARCHAR(255) DEFAULT 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
+    gender ENUM('male', 'female', 'unknown') DEFAULT 'unknown',
+    bio VARCHAR(500) DEFAULT '这个人很懒,什么也没留下',
+    phone VARCHAR(20) UNIQUE,
     created_at DATETIME DEFAULT NOW(),
-    updated_at DATETIME DEFAULT NOW() ON UPDATE NOW()
+    updated_at DATETIME DEFAULT NOW() ON UPDATE NOW(),
+    INDEX username_UNIQUE (username),
+    INDEX phone_UNIQUE (phone)
 );
 ```
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | VARCHAR(36) | 用户 ID（UUID） |
+| id | INT | 用户 ID（自增主键） |
 | username | VARCHAR(50) | 用户名（唯一） |
 | password | VARCHAR(255) | 密码（bcrypt加密） |
-| avatar | VARCHAR(255) | 头像 URL |
-| nickname | VARCHAR(50) | 昵称 |
-| bio | TEXT | 个人简介 |
+| nickname | VARCHAR(50) | 昵称（可选） |
+| avatar | VARCHAR(255) | 头像 URL（可选） |
+| gender | ENUM | 性别（male/female/unknown） |
+| bio | VARCHAR(500) | 个人简介（可选） |
+| phone | VARCHAR(20) | 手机号（唯一，可选） |
 | created_at | DATETIME | 创建时间 |
 | updated_at | DATETIME | 更新时间 |
 
-#### 2. 用户令牌表 (user_tokens)
+#### 2. 用户令牌表 (user_token)
 
 ```sql
-CREATE TABLE user_tokens (
+CREATE TABLE user_token (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(36) NOT NULL,
-    token VARCHAR(255) UNIQUE NOT NULL,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL,
     expires_at DATETIME NOT NULL,
-    created_at DATETIME DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    created_at DATETIME NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    INDEX token_UNIQUE (token),
+    INDEX fk_user_token_idx (user_id)
 );
 ```
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | INT | 令牌 ID |
-| user_id | VARCHAR(36) | 用户 ID（外键） |
-| token | VARCHAR(255) | Token（唯一） |
+| id | INT | 令牌 ID（自增主键） |
+| user_id | INT | 用户 ID（外键） |
+| token | VARCHAR(255) | Token（UUID） |
 | expires_at | DATETIME | 过期时间 |
 | created_at | DATETIME | 创建时间 |
 
@@ -230,48 +240,53 @@ CREATE TABLE news (
 | created_at | DATETIME | 创建时间 |
 | updated_at | DATETIME | 更新时间 |
 
-#### 5. 收藏表 (favorites)
+#### 5. 收藏表 (favorite)
 
 ```sql
-CREATE TABLE favorites (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(36) NOT NULL,
-    news_id INT NOT NULL,
-    created_at DATETIME DEFAULT NOW(),
-    UNIQUE KEY unique_favorite (user_id, news_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+CREATE TABLE favorite (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '收藏ID',
+    user_id INT NOT NULL COMMENT '用户ID',
+    news_id INT NOT NULL COMMENT '新闻ID',
+    created_at DATETIME DEFAULT NOW() COMMENT '创建时间',
+    UNIQUE KEY user_news_unique (user_id, news_id),
+    INDEX fk_favorite_user_idx (user_id),
+    INDEX fk_favorite_news_idx (news_id),
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE
 );
 ```
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | INT | 收藏记录 ID |
-| user_id | VARCHAR(36) | 用户 ID（外键） |
+| id | INT | 收藏记录 ID（主键，自增） |
+| user_id | INT | 用户 ID（外键） |
 | news_id | INT | 新闻 ID（外键） |
 | created_at | DATETIME | 收藏时间 |
 
-**约束**: 同一用户不能重复收藏同一新闻（唯一索引）
+**约束**: 同一用户不能重复收藏同一新闻（唯一约束 user_news_unique）
 
-#### 6. 浏览历史表 (histories)
+#### 6. 浏览历史表 (history)
 
 ```sql
-CREATE TABLE histories (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(36) NOT NULL,
-    news_id INT NOT NULL,
-    created_at DATETIME DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+CREATE TABLE history (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '历史ID',
+    user_id INT NOT NULL COMMENT '用户ID',
+    news_id INT NOT NULL COMMENT '新闻ID',
+    view_time DATETIME NOT NULL COMMENT '浏览时间',
+    INDEX fk_history_user_idx (user_id),
+    INDEX fk_history_news_idx (news_id),
+    INDEX idx_view_time (view_time),
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE
 );
 ```
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | INT | 历史记录 ID |
-| user_id | VARCHAR(36) | 用户 ID（外键） |
+| id | INT | 历史记录 ID（主键，自增） |
+| user_id | INT | 用户 ID（外键） |
 | news_id | INT | 新闻 ID（外键） |
-| created_at | DATETIME | 浏览时间 |
+| view_time | DATETIME | 浏览时间 |
 
 ---
 
@@ -372,7 +387,7 @@ pip install -r requirements.txt
 
 #### 2. 配置数据库
 
-编辑 `toutiao_app/config/db_conf.py`:
+编辑 `TouTiaoApp/config/db_conf.py`:
 
 ```python
 ASYNC_DATABASE_URL = "mysql+aiomysql://用户名:密码@主机:端口/数据库名?charset=utf8mb4"
@@ -380,7 +395,7 @@ ASYNC_DATABASE_URL = "mysql+aiomysql://用户名:密码@主机:端口/数据库�
 
 #### 3. 配置 Redis
 
-编辑 `toutiao_app/config/cache_conf.py`:
+编辑 `TouTiaoApp/config/cache_conf.py`:
 
 ```python
 REDIS_URL = "redis://:密码@主机:端口/数据库编号"
@@ -467,7 +482,7 @@ COPY TouTiaoApp ./toutiao_app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "toutiao_app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "TouTiaoApp.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 #### docker-compose.yml
@@ -627,7 +642,7 @@ Content-Type: application/json
   "code": 200,
   "message": "success",
   "data": {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "id": 1,
     "username": "testuser",
     "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
   }
@@ -681,7 +696,7 @@ Content-Type: application/json
   "code": 200,
   "message": "success",
   "data": {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "id": 1,
     "username": "testuser",
     "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
   }
@@ -721,7 +736,7 @@ Authorization: Bearer <token>
   "code": 200,
   "message": "success",
   "data": {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "id": 1,
     "username": "testuser",
     "nickname": "测试用户",
     "avatar": "https://example.com/avatar.jpg",
@@ -778,7 +793,7 @@ Content-Type: application/json
   "code": 200,
   "message": "success",
   "data": {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "id": 1,
     "username": "testuser",
     "nickname": "新昵称",
     "avatar": "https://example.com/new-avatar.jpg",
@@ -1474,11 +1489,12 @@ Content-Type: application/json
   "code": 200,
   "message": "success",
   "data": {
-    "message": "你好！有什么我可以帮你的吗？",
-    "history": [
-      {"role": "user", "content": "你好"},
-      {"role": "assistant", "content": "你好！有什么我可以帮你的吗？"}
-    ]
+    "reply": "你好！有什么我可以帮你的吗？",
+    "usage": {
+      "prompt_tokens": 10,
+      "completion_tokens": 20,
+      "total_tokens": 30
+    }
   }
 }
 ```
@@ -1487,13 +1503,13 @@ Content-Type: application/json
 ```
 Content-Type: text/event-stream
 
-data: {"message": "你好"}
-data: {"message": "！"}
-data: {"message": "有什么"}
-data: {"message": "我可以"}
-data: {"message": "帮你的"}
-data: {"message": "吗？"}
-data: {"done": true}
+data: {"id":"...","choices":[{"delta":{"content":"你好"}}]}
+data: {"id":"...","choices":[{"delta":{"content":"！"}}]}
+data: {"id":"...","choices":[{"delta":{"content":"有什么"}}]}
+data: {"id":"...","choices":[{"delta":{"content":"我可以"}}]}
+data: {"id":"...","choices":[{"delta":{"content":"帮你的"}}]}
+data: {"id":"...","choices":[{"delta":{"content":"吗？"}}]}
+data: [DONE]
 ```
 
 **错误响应**:
@@ -1562,6 +1578,19 @@ curl -X POST http://127.0.0.1:8000/api/ai/chat \
 
 ---
 
-**文档版本**: v2.0  
+**文档版本**: v2.1  
 **最后更新**: 2026-05-23  
 **维护者**: Toutiao App 开发团队
+
+---
+
+## 更新日志
+
+### v2.1 (2026-05-23)
+- ✅ 修正项目目录结构，统一使用 `TouTiaoApp` 目录名
+- ✅ 更新数据库表结构，与实际模型保持一致（user/user_token/favorite/history）
+- ✅ 修正用户ID字段类型为 INT（原为 VARCHAR(36) UUID）
+- ✅ 更新AI问答接口响应格式，匹配实际返回结构
+- ✅ 添加 log_utils.py 工具文件说明
+- ✅ 启用SQLAlchemy SQL日志输出
+- ✅ 优化SSE流式响应日志记录
