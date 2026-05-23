@@ -401,7 +401,7 @@ uvicorn TouTiaoApp.main:app --host 0.0.0.0 --port 8000 --workers 4
 #### 1. 安装依赖
 
 ```bash
-cd xwzx_news
+cd xwzx-news
 npm install
 ```
 
@@ -506,7 +506,7 @@ services:
     image: node:18-alpine
     working_dir: /app
     volumes:
-      - ./xwzx_news:/app
+      - ./xwzx-news:/app
     command: sh -c "npm install && npm run build"
 
 volumes:
