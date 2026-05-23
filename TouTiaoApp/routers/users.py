@@ -73,7 +73,7 @@ async def get_user_info(current_user: User = Depends(get_current_user)):
 
 # 定义更新用户信息接口处理PUT请求到/api/user/update
 @router.put("/update")
-async def update_user_info(
+async def update_user_info_route(
         # 接收用户更新请求数据
         user_data: UserUpdateRequest,
         # 注入当前用户
@@ -81,7 +81,7 @@ async def update_user_info(
         # 注入数据库会话
         db: AsyncSession = Depends(post_dbs)
 ):
-    # 调用CURD层更新用户信息
+    # 调用CURD层更新用户信息（current_user 已经是 User 对象）
     updated_user = await update_user_info(db, current_user.username, user_data)
         
     # 转换为响应模型并返回
