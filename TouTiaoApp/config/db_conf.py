@@ -7,7 +7,7 @@ ASYNC_DATABASE_URL = "mysql+aiomysql://root:123456@localhost:3306/news_app?chars
 # 创建异步数据库引擎，用于管理数据库连接池
 engine = create_async_engine(
     ASYNC_DATABASE_URL,
-    echo=True,
+    echo=True,  # 启用SQL日志输出，便于调试
     future=True,
     pool_size=10,
     max_overflow=20,
