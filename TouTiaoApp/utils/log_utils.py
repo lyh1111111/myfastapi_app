@@ -30,7 +30,7 @@ class RequestLogger:
             self.logger.addHandler(console_handler)
         
         # 存储最后一次请求的信息（用于在结束时添加到同一行）
-        self.last_request_info = None
+        self._last_request_info = None
     
     def log_request_start(self, method: str, path: str, query_params: Dict = None, body: Any = None):
         """
@@ -50,8 +50,8 @@ class RequestLogger:
         # 构建请求行
         request_line = f"[{timestamp}] {method} {path}"
         
-        # 存储请求信息
-        self.last_request_info = {
+        # 存储请求信息（使用局部变量，避免实例属性）
+        last_request_info = {
             'timestamp': timestamp,
             'method': method,
             'path': path,
@@ -71,6 +71,9 @@ class RequestLogger:
         if body:
             body_str = json.dumps(body, ensure_ascii=False, indent=2) if isinstance(body, dict) else str(body)
             self.logger.info(f"{body_str}")
+        
+        # 将请求信息保存到类属性，供 log_request_end 使用
+        self._last_request_info = last_request_info
     
     def log_request_end(self, method: str, path: str, status_code: int, process_time: float, response_data: Any = None):
         """
@@ -87,15 +90,15 @@ class RequestLogger:
         process_time_ms = process_time * 1000
         
         # 重新输出请求行，并在末尾添加响应状态和耗时
-        if self.last_request_info:
-            timestamp = self.last_request_info['timestamp']
-            request_method = self.last_request_info['method']
-            request_path = self.last_request_info['path']
-            query_params = self.last_request_info['query_params']
-            body = self.last_request_info['body']
+        if self._last_request_info:
+            timestamp = self._last_request_info['timestamp']
+            request_method = self._last_request_info['method']
+            request_path = self._last_request_info['path']
+            query_params = self._last_request_info.get('query_params')
+            body = self._last_request_info.get('body')
             
             # 清除旧信息
-            self.last_request_info = None
+            self._last_request_info = None
             
             # 输出空行分隔
             self.logger.info('')
