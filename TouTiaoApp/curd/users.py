@@ -111,24 +111,20 @@ async def get_user_by_token(db: AsyncSession, token: str):
 
 # 更新用户信息的函数
 async def update_user_info(db: AsyncSession, username: str, user_data: UserUpdateRequest):
-    # 构造UPDATE语句更新指定用户名的记录
-    query = update(User).where(User.username == username).values(**user_data.model_dump(
-        # 排除未设置的字段
-        exclude_unset=True,
-        # 排除值为None的字段
-        exclude_none=True
-    ))
-    # 执行更新查询并等待结果
-    result = await db.execute(query)
-    # 提交事务使更新生效
+    # 先查询用户对象
+    user = await get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="当前用户不存在")
+    
+    # 动态更新字段（只更新提供的非None字段）
+    for key, value in user_data.model_dump(exclude_unset=True, exclude_none=True).items():
+        setattr(user, key, value)
+    # 提交事务
     await db.commit()
-    # 检查是否命中数据如果没有则抛出404异常
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="User not found")
-    # 查询更新后的用户对象
-    updated_user = await get_user_by_username(db, username)
-    # 返回更新成功的用户对象
-    return updated_user
+    # 刷新对象获取最新数据
+    await db.refresh(user)
+    # 返回更新后的用户对象
+    return user
 
 
 # 修改用户密码的函数
