@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 # 从SQLAlchemy导入各种字段类型和约束
-from sqlalchemy import Enum, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Enum, Integer, String, DateTime, ForeignKey, Text
 # 从SQLAlchemy ORM模块导入声明式基类和映射工具
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 # 从SQLAlchemy SQL模块导入内置函数如now()
@@ -59,8 +59,8 @@ class User(Base):
     password: Mapped[str] = mapped_column(String(255), nullable=False, comment="密码（加密存储）")
     # 定义昵称字段可以为空
     nickname: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, comment="昵称")
-    # 定义头像URL字段设置默认头像地址
-    avatar: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, comment="头像URL", default="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg")
+    # 定义头像URL字段设置默认头像地址（使用TEXT存储Base64图片数据）
+    avatar: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="头像URL", default="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg")
     # 定义性别字段使用枚举类型限制为male/female/unknown
     gender: Mapped[Optional[str]] = mapped_column(Enum("male", "female", "unknown"), default="unknown", nullable=True, comment="性别")
     # 定义个人简介字段设置默认提示文本
