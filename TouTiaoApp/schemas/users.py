@@ -66,16 +66,6 @@ class UserInfoResponse(UserInfoBase):
     id: int
     # 定义用户名字段必填的字符串类型
     username: str
-    # 定义昵称字段可选的字符串类型
-    nickname: Optional[str] = None
-    # 定义头像字段可选的字符串类型数据库可为空
-    avatar: Optional[str] = None
-    # 定义简介字段可选的字符串类型数据库可为空
-    bio: Optional[str] = None
-    # 定义性别字段可选的字符串类型数据库可为空
-    gender: Optional[str] = None
-    # 定义手机号字段可选的字符串类型默认为None
-    phone: Optional[str] = None
 
 
 # 定义用户认证响应模型包含token和用户信息

@@ -2,13 +2,12 @@
 import uuid
 # 导入日期时间类用于处理令牌过期时间
 from datetime import datetime, timedelta
+from logging import log
 
 # 从SQLAlchemy导入查询构造器和更新语句
 from sqlalchemy import select, update
 # 导入异步会话类型注解
 from sqlalchemy.ext.asyncio import AsyncSession
-# 导入当前用户函数（未使用）
-from sqlalchemy.sql.functions import current_user
 # 导入HTTP异常类
 from starlette.exceptions import HTTPException
 
@@ -17,6 +16,7 @@ from TouTiaoApp.models.users import User, UserToken
 # 导入用户请求和响应数据模式
 from TouTiaoApp.schemas.users import UserRegisterLoginRequest, UserUpdateRequest, UserChangePasswordRequest, \
     UserInfoResponse
+from TouTiaoApp.utils.log_utils import api_logger
 # 导入密码加密工具函数
 from TouTiaoApp.utils.security import *
 
@@ -149,3 +149,25 @@ async def change_password(db: AsyncSession, user: User, old_password: str, new_p
     await db.refresh(user)
     # 返回成功标志
     return True
+
+# if __name__ == '__main__':
+#     import asyncio
+#     from TouTiaoApp.config.db_conf import async_session, engine
+#
+#     async def main():
+#         # 创建数据库会话实例
+#         async with async_session() as db:
+#             try:
+#                 # 正确等待异步函数
+#                 token = await create_user_token(db=db, user_id=14)
+#                 print(type(token),f"用户14的令牌为：{token}")
+#             finally:
+#                 # 确保会话被关闭
+#                 await db.close()
+#
+#         # 关闭数据库引擎，释放所有连接
+#         await engine.dispose()
+#
+#     # 运行异步主函数
+#     asyncio.run(main())
+
