@@ -232,6 +232,53 @@ export const useUserStore = defineStore('user', {
           message: error.response?.data?.message || '修改密码请求失败，请稍后再试'
         };
       }
+    },
+    
+    // 更新用户信息（头像、用户名、昵称等）
+    async updateUserInfo(updateData) {
+      try {
+        // 检查是否有token
+        if (!this.token) {
+          return {
+            success: false,
+            message: '未登录'
+          };
+        }
+        
+        // 发送更新用户信息请求
+        const response = await axios.put(`${apiConfig.baseURL}/api/user/update`, 
+          updateData,
+          {
+            headers: {
+              Authorization: this.token
+            }
+          }
+        );
+        
+        // 检查响应状态
+        if (response.data && response.data.code === 200) {
+          // 更新本地用户信息
+          if (response.data.data) {
+            this.userInfo = { ...this.userInfo, ...response.data.data };
+          }
+          
+          return {
+            success: true,
+            message: '更新成功'
+          };
+        } else {
+          return {
+            success: false,
+            message: response.data.message || '更新失败'
+          };
+        }
+      } catch (error) {
+        console.error('更新用户信息请求失败:', error);
+        return {
+          success: false,
+          message: error.response?.data?.message || '更新用户信息失败，请稍后再试'
+        };
+      }
     }
   },
   
