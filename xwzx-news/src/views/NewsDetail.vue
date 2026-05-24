@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNewsStore } from '../store/modules/news'
 import { useHistoryStore } from '../store/modules/history'
@@ -82,9 +82,62 @@ const contentParagraphs = computed(() => {
   return newsStore.newsDetail.content.split('\n\n').filter(p => p.trim())
 })
 
-// 返回上一页
+// 加载新闻详情的函数
+const loadNewsDetail = async () => {
+  await newsStore.getNewsDetail(newsId.value)
+  
+  // 添加到浏览历史
+  if (newsStore.newsDetail.id) {
+    // 先调用API记录浏览历史
+    if (userStore.getLoginStatus) {
+      try {
+        const result = await historyStore.addHistoryApi(newsStore.newsDetail.id);
+        console.log('记录浏览历史API结果:', result);
+      } catch (error) {
+        console.error('记录浏览历史API失败:', error);
+      }
+    }
+    
+    // 无论API是否成功，都添加到本地浏览历史
+    // historyStore.addHistory(newsStore.newsDetail);
+  }
+  
+  // 加载收藏数据
+  favoriteStore.loadFavorites()
+  
+  // 检查文章收藏状态
+  if (userStore.getLoginStatus && newsStore.newsDetail.id) {
+    const result = await favoriteStore.checkFavoriteStatusApi(newsStore.newsDetail.id)
+    if (result.success && !result.isLocal) {
+      // 如果API请求成功且不是本地状态，更新本地收藏状态
+      if (result.isFavorite && !favoriteStore.isFavorite(newsStore.newsDetail.id)) {
+        favoriteStore.addFavorite(newsStore.newsDetail)
+      } else if (!result.isFavorite && favoriteStore.isFavorite(newsStore.newsDetail.id)) {
+        favoriteStore.removeFavorite(newsStore.newsDetail.id)
+      }
+    }
+  }
+}
+
+// 返回按钮点击事件 - 返回到新闻分类首页
 const onClickLeft = () => {
-  router.back()
+  // 获取当前新闻的分类ID
+  const categoryId = newsStore.newsDetail.categoryId
+  
+  if (categoryId) {
+    console.log('返回到分类首页，分类ID:', categoryId)
+    // 切换到对应分类
+    newsStore.changeCategory(categoryId)
+    // 跳转到首页，并携带分类ID参数
+    router.push({
+      path: '/home',
+      query: { categoryId: categoryId }
+    })
+  } else {
+    // 如果没有分类ID，则返回上一页
+    console.log('未找到分类ID，返回上一页')
+    router.back()
+  }
 }
 
 // 跳转到相关新闻
@@ -132,41 +185,17 @@ const toggleFavorite = async () => {
   }
 }
 
+// 监听路由参数变化，重新加载新闻详情
+watch(newsId, async (newId, oldId) => {
+  if (newId !== oldId) {
+    console.log('路由参数变化，重新加载新闻详情:', newId)
+    await loadNewsDetail()
+  }
+})
+
 // 组件挂载时获取新闻详情并添加到浏览历史
 onMounted(async () => {
-  await newsStore.getNewsDetail(newsId.value)
-  
-  // 添加到浏览历史
-  if (newsStore.newsDetail.id) {
-    // 先调用API记录浏览历史
-    if (userStore.getLoginStatus) {
-      try {
-        const result = await historyStore.addHistoryApi(newsStore.newsDetail.id);
-        console.log('记录浏览历史API结果:', result);
-      } catch (error) {
-        console.error('记录浏览历史API失败:', error);
-      }
-    }
-    
-    // 无论API是否成功，都添加到本地浏览历史
-    // historyStore.addHistory(newsStore.newsDetail);
-  }
-  
-  // 加载收藏数据
-  favoriteStore.loadFavorites()
-  
-  // 检查文章收藏状态
-  if (userStore.getLoginStatus && newsStore.newsDetail.id) {
-    const result = await favoriteStore.checkFavoriteStatusApi(newsStore.newsDetail.id)
-    if (result.success && !result.isLocal) {
-      // 如果API请求成功且不是本地状态，更新本地收藏状态
-      if (result.isFavorite && !favoriteStore.isFavorite(newsStore.newsDetail.id)) {
-        favoriteStore.addFavorite(newsStore.newsDetail)
-      } else if (!result.isFavorite && favoriteStore.isFavorite(newsStore.newsDetail.id)) {
-        favoriteStore.removeFavorite(newsStore.newsDetail.id)
-      }
-    }
-  }
+  await loadNewsDetail()
 })
 </script>
 
@@ -260,6 +289,18 @@ onMounted(async () => {
 .related-item {
   display: flex;
   align-items: center;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.related-item:hover {
+  background-color: #f7f8fa;
+}
+
+.related-item:active {
+  background-color: #ebedf0;
 }
 
 .related-image {
