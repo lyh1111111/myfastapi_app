@@ -15,14 +15,16 @@
               round
               width="60"
               height="60"
-              src="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg"
+              :src="userInfo.avatar || 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'"
+              @click="showAvatarUpload"
+              class="avatar-clickable"
             />
           </template>
         </van-cell>
       </van-cell-group>
       
       <van-cell-group inset class="info-group">
-        <van-cell title="用户名" :value="userInfo.username || 'admin'" />
+        <van-cell title="用户名" :value="userInfo.username || 'admin'" is-link @click="showUsernameDialog" />
         <van-cell title="账号ID" :value="`ID: heima-${userId || 'N/A'}`" />
         <van-cell title="个人简介" :value="userBio || '暂无简介'" is-link @click="showBioDialog" />
       </van-cell-group>
@@ -175,6 +177,135 @@ const showPasswordConfirm = () => {
   });
 };
 
+const showAvatarUpload = () => {
+  // 创建隐藏的文件选择器
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.style.display = 'none';
+  
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      showToast.fail('请选择图片文件');
+      return;
+    }
+    
+    // 验证文件大小（最大2MB）
+    if (file.size > 2 * 1024 * 1024) {
+      showToast.fail('图片大小不能超过2MB');
+      return;
+    }
+    
+    try {
+      // 显示加载提示
+      const loadingInstance = showLoadingToast({
+        message: '上传中...',
+        forbidClick: true,
+        duration: 0
+      });
+      
+      // 将文件转换为Base64
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const avatarUrl = event.target.result;
+        
+        try {
+          // 调用API更新头像
+          const result = await userStore.updateUserInfo({ avatar: avatarUrl });
+          
+          // 关闭加载提示
+          loadingInstance.close();
+          
+          if (result.success) {
+            showSuccessToast('头像更新成功');
+          } else {
+            showFailToast(result.message || '头像更新失败');
+          }
+        } catch (error) {
+          loadingInstance.close();
+          showFailToast('头像上传失败');
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('头像上传失败:', error);
+      showToast.clear();
+      showToast.fail('头像上传失败');
+    }
+  };
+  
+  document.body.appendChild(fileInput);
+  fileInput.click();
+  document.body.removeChild(fileInput);
+};
+
+const showUsernameDialog = () => {
+  // 使用ref创建响应式变量
+  const newUsername = ref(userInfo.value?.username || '');
+  
+  showDialog({
+    title: '修改用户名',
+    showCancelButton: true,
+    confirmButtonText: '确认',
+    className: 'username-dialog',
+    message: h('div', { style: 'text-align: left; padding: 10px 0;' }, [
+      h('div', { style: 'margin-bottom: 15px;' }, [
+        h('div', { style: 'margin-bottom: 5px; text-align: left;' }, '新用户名：'),
+        h('input', {
+          type: 'text',
+          value: newUsername.value,
+          placeholder: '请输入新用户名',
+          onInput: (e) => { newUsername.value = e.target.value },
+          style: 'width: 100%; border: 1px solid #dcdee0; border-radius: 4px; padding: 8px; box-sizing: border-box;'
+        })
+      ])
+    ])
+  }).then(async () => {
+    // 点击确认按钮
+    if (!newUsername.value.trim()) {
+      showToast.fail('用户名不能为空');
+      return;
+    }
+    
+    // 检查是否与当前用户名相同
+    if (newUsername.value.trim() === userInfo.value?.username) {
+      showToast('用户名未改变');
+      return;
+    }
+    
+    try {
+      // 显示加载提示
+      const loadingInstance = showLoadingToast({
+        message: '修改中...',
+        forbidClick: true,
+        duration: 0
+      });
+      
+      // 调用API更新用户名
+      const result = await userStore.updateUserInfo({ username: newUsername.value.trim() });
+      
+      // 关闭加载提示
+      loadingInstance.close();
+      
+      if (result.success) {
+        showSuccessToast('用户名修改成功');
+      } else {
+        showFailToast(result.message || '用户名修改失败');
+      }
+    } catch (error) {
+      console.error('修改用户名失败:', error);
+      showToast.clear();
+      showToast.fail('用户名修改失败');
+    }
+  }).catch(() => {
+    // 点击取消按钮
+  });
+};
+
 const showBioDialog = () => {
   // 使用ref创建响应式变量
   const newBioValue = ref(userBio.value);
@@ -267,5 +398,14 @@ const showBioDialog = () => {
   padding: 8px;
   outline: none;
   box-sizing: border-box;
+}
+
+.avatar-clickable {
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.avatar-clickable:hover {
+  opacity: 0.8;
 }
 </style>
