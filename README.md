@@ -6,11 +6,12 @@ Toutiao App 是一个基于 FastAPI + Vue3 的全栈新闻资讯平台，提供�
 
 ### 核心功能
 
-- ✅ **用户系统**: 注册、登录、个人信息管理
+- ✅ **用户系统**: 注册、登录、个人信息管理、头像上传（Base64）
 - ✅ **新闻浏览**: 分类浏览、分页加载、详情查看
 - ✅ **收藏管理**: 添加收藏、取消收藏、收藏列表
 - ✅ **历史记录**: 浏览记录、历史记录管理
 - ✅ **AI 问答**: 智能对话、流式响应
+- ✅ **智能导航**: 相关推荐跳转、返回分类首页
 
 ---
 
@@ -38,6 +39,7 @@ Toutiao App 是一个基于 FastAPI + Vue3 的全栈新闻资讯平台，提供�
 | **Vite** | ^7.1.6 | 前端构建工具 |
 | **Vue Router** | ^4.5.1 | 路由管理 |
 | **Pinia** | ^3.0.3 | 状态管理 |
+| **Pinia PersistedState** | ^4.5.0 | Pinia 持久化插件 |
 | **Vant** | ^4.9.21 | 移动端 UI 组件库 |
 | **Axios** | ^1.12.2 | HTTP 请求库 |
 | **Vue I18n** | ^9.8.0 | 国际化支持 |
@@ -51,7 +53,7 @@ Toutiao App 是一个基于 FastAPI + Vue3 的全栈新闻资讯平台，提供�
 ```
 myfastapi_app/
 ├── TouTiaoApp/              # 后端项目根目录
-│   ├── main.py               # FastAPI 应用入口
+│   ├── main.py               # FastAPI 应用入口（含日志中间件、SSE流式处理）
 │   ├── config/               # 配置模块
 │   │   ├── db_conf.py        # 数据库配置（MySQL）
 │   │   ├── cache_conf.py     # Redis 缓存配置
@@ -90,33 +92,36 @@ myfastapi_app/
 ├── xwzx-news/                # 前端项目根目录
 │   ├── src/
 │   │   ├── views/            # 页面组件
-│   │   │   ├── Home.vue      # 首页
-│   │   │   ├── NewsDetail.vue # 新闻详情
+│   │   │   ├── Home.vue      # 首页（分类切换、新闻列表）
+│   │   │   ├── NewsDetail.vue # 新闻详情（收藏、相关推荐、返回优化）
 │   │   │   ├── Category.vue  # 分类页
 │   │   │   ├── Login.vue     # 登录页
 │   │   │   ├── Register.vue  # 注册页
 │   │   │   ├── Favorite.vue  # 收藏页
 │   │   │   ├── History.vue   # 历史页
-│   │   │   ├── AIChat.vue    # AI 问答页
-│   │   │   ├── My.vue        # 个人中心
-│   │   │   ├── Profile.vue   # 个人资料
+│   │   │   ├── AIChat.vue    # AI 问答页（流式响应）
+│   │   │   ├── My.vue        # 个人中心（头像动态显示）
+│   │   │   ├── Profile.vue   # 个人资料（头像上传Base64）
 │   │   │   └── Settings.vue  # 设置页
 │   │   ├── components/       # 公共组件
 │   │   │   ├── TabBar.vue    # 底部导航栏
-│   │   │   └── NewsItem.vue  # 新闻列表项
+│   │   │   ├── NewsItem.vue  # 新闻列表项
+│   │   │   └── HelloWorld.vue # 示例组件
 │   │   ├── store/            # Pinia 状态管理
 │   │   │   ├── user.js       # 用户状态
 │   │   │   ├── news.js       # 新闻状态
 │   │   │   ├── favorite.js   # 收藏状态
 │   │   │   ├── history.js    # 历史状态
 │   │   │   ├── theme.js      # 主题状态
-│   │   │   └── language.js   # 语言状态
+│   │   │   ├── language.js   # 语言状态
+│   │   │   └── index.js      # Store 入口
 │   │   ├── router/           # 路由配置
 │   │   ├── i18n/             # 国际化配置
 │   │   ├── config/           # 前端配置
 │   │   │   └── api.js        # API 地址配置
 │   │   ├── App.vue           # 根组件
-│   │   └── main.js           # 入口文件
+│   │   ├── main.js           # 入口文件
+│   │   └── style.css         # 全局样式
 │   ├── package.json          # 依赖配置
 │   └── vite.config.js        # Vite 配置
 │
@@ -138,7 +143,7 @@ CREATE TABLE user (
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     nickname VARCHAR(50),
-    avatar VARCHAR(255) DEFAULT 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
+    avatar TEXT DEFAULT 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
     gender ENUM('male', 'female', 'unknown') DEFAULT 'unknown',
     bio VARCHAR(500) DEFAULT '这个人很懒,什么也没留下',
     phone VARCHAR(20) UNIQUE,
@@ -155,7 +160,7 @@ CREATE TABLE user (
 | username | VARCHAR(50) | 用户名（唯一） |
 | password | VARCHAR(255) | 密码（bcrypt加密） |
 | nickname | VARCHAR(50) | 昵称（可选） |
-| avatar | VARCHAR(255) | 头像 URL（可选） |
+| avatar | TEXT | 头像 URL 或 Base64 编码（支持长文本） |
 | gender | ENUM | 性别（male/female/unknown） |
 | bio | VARCHAR(500) | 个人简介（可选） |
 | phone | VARCHAR(20) | 手机号（唯一，可选） |
@@ -319,9 +324,13 @@ CREATE TABLE history (
     ↓
 CORS 中间件
     ↓
+API 日志中间件（记录请求信息、SSE流式处理）
+    ↓
 路由匹配 (routers/)
     ↓
 依赖注入 (认证、数据库会话)
+    ↓
+全局异常处理器
     ↓
 业务逻辑处理 (curd/)
     ↓
@@ -332,6 +341,8 @@ CORS 中间件
 数据序列化 (schemas/)
     ↓
 统一响应封装 (utils/response.py)
+    ↓
+日志记录响应信息
     ↓
 返回客户端
 ```
@@ -606,7 +617,7 @@ python scripts/init_db.py
 | 用户注册 | POST | `/register` | 创建新用户账号 | ❌ |
 | 用户登录 | POST | `/login` | 用户登录获取Token | ❌ |
 | 获取用户信息 | GET | `/info` | 获取当前用户详细信息 | ✅ |
-| 更新用户信息 | PUT | `/update` | 更新用户个人资料 | ✅ |
+| 更新用户信息 | PUT | `/update` | 更新用户个人资料（含头像Base64） | ✅ |
 | 修改密码 | PUT | `/password` | 修改用户登录密码 | ✅ |
 
 ---
@@ -772,11 +783,14 @@ Content-Type: application/json
 |--------|------|------|------|------|
 | nickname | string | 否 | 长度≤50 | 昵称 |
 | bio | string | 否 | 长度≤500 | 个人简介 |
-| avatar | string | 否 | 长度≤255 | 头像URL |
+| avatar | string | 否 | 无限制 | 头像URL或Base64编码（支持长字符串） |
 | gender | string | 否 | 长度≤10 | 性别（male/female/other） |
 | phone | string | 否 | 长度≤11 | 手机号 |
 
-**说明**: 所有字段均为可选，只更新提供的字段
+**说明**: 
+- 所有字段均为可选，只更新提供的字段
+- `avatar` 字段支持 URL 或 Base64 编码的图片数据（无长度限制）
+- Base64 格式示例: `data:image/jpeg;base64,/9j/4AAQSkZJRg...`
 
 **请求示例**:
 ```json
@@ -1039,6 +1053,8 @@ GET /api/news/detail?id=1
 - 每次查看自动增加浏览量（views +1）
 - 返回同一分类下的相关新闻（最多5条）
 - 排除当前新闻本身
+- 前端支持点击相关推荐跳转到对应新闻详情
+- 从相关推荐返回时，自动返回到该新闻所属分类的首页
 
 ---
 
@@ -1578,13 +1594,24 @@ curl -X POST http://127.0.0.1:8000/api/ai/chat \
 
 ---
 
-**文档版本**: v2.1  
+**文档版本**: v2.2  
 **最后更新**: 2026-05-23  
 **维护者**: Toutiao App 开发团队
 
 ---
 
 ## 更新日志
+
+### v2.2 (2026-05-23)
+- ✅ 新增头像上传功能，支持 Base64 编码（无长度限制）
+- ✅ 新增新闻详情相关推荐跳转功能，可点击进入相关新闻
+- ✅ 优化返回按钮逻辑，从相关推荐返回时跳转到分类首页
+- ✅ 修复 Vue Router 同路径导航不刷新问题，使用 watch 监听路由参数变化
+- ✅ 前端 My.vue 页面头像动态绑定，实时显示用户上传的头像
+- ✅ 后端 users.py schema 优化，avatar 字段移除 max_length 限制
+- ✅ 数据库模型优化，avatar 字段使用 Text 类型支持长文本
+- ✅ 完善项目结构文档，补充组件详细说明
+- ✅ 添加 Pinia PersistedState 持久化插件到技术栈
 
 ### v2.1 (2026-05-23)
 - ✅ 修正项目目录结构，统一使用 `TouTiaoApp` 目录名
