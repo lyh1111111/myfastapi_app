@@ -2,12 +2,15 @@
 from fastapi import FastAPI, Request
 # 导入CORS中间件，用于处理跨域请求
 from fastapi.middleware.cors import CORSMiddleware
+# 导入starlette响应类
+from starlette.responses import Response, StreamingResponse
 # 导入新闻和用户路由模块，定义API端点
 from TouTiaoApp.routers import news, users, favorite, history, ai_chat
 # 导入全局异常处理器注册函数
 from TouTiaoApp.utils.exception import register_exceptions
 # 导入日志工具
 from TouTiaoApp.utils.log_utils import api_logger
+from typing import Mapping
 import json
 import time
 
@@ -16,7 +19,6 @@ app = FastAPI()
 
 # 配置CORS（跨域资源共享）中间件
 app.add_middleware(
-    # 使用CORSMiddleware处理跨域请求
     CORSMiddleware,
     # 允许的来源列表，"*"表示允许所有来源（仅开发环境使用）
     allow_origins=["*"],
@@ -26,7 +28,7 @@ app.add_middleware(
     allow_methods=["*"],
     # 允许的请求头列表，"*"表示允许所有请求头
     allow_headers=["*"],
-)
+)  # type: ignore[arg-type]
 
 
 # API请求日志中间件 - 记录请求路径、方法、入参和响应
@@ -77,12 +79,19 @@ async def api_request_logger(request: Request, call_next):
             total_chars = 0
             extracted_text_parts = []  # 保存提取的文本内容
             
-            async for chunk in response.body_iterator:
+            # 使用正确的属性名访问流式数据
+            stream_gen = getattr(response, 'body_iterator', None)
+            if stream_gen is None:
+                # 如果 body_iterator 不存在，尝试其他方法
+                yield b""
+                return
+            
+            async for stream_chunk in stream_gen:
                 chunk_count += 1
-                if isinstance(chunk, bytes):
-                    chunk_text = chunk.decode('utf-8', errors='ignore')
+                if isinstance(stream_chunk, bytes):
+                    chunk_text = stream_chunk.decode('utf-8', errors='ignore')
                 else:
-                    chunk_text = str(chunk)
+                    chunk_text = str(stream_chunk)
                 
                 total_chars += len(chunk_text)
                 
@@ -99,16 +108,16 @@ async def api_request_logger(request: Request, call_next):
                             content = data_json.get('choices', [{}])[0].get('delta', {}).get('content', '')
                             if content:
                                 extracted_text_parts.append(content)
-                        except:
-                            pass  # 忽略解析错误
+                        except json.JSONDecodeError:
+                            pass  # 忽略JSON解析错误
                 
-                yield chunk
+                yield stream_chunk
             
             # 流式响应结束后记录日志
             full_text = ''.join(extracted_text_parts)
             
             # 构建响应数据
-            response_data = {
+            streaming_response_data: Mapping[str, object] = {
                 "_type": "Streaming Response (SSE)",
                 "_chunks_sent": chunk_count,
                 "_total_chars": total_chars,
@@ -117,22 +126,23 @@ async def api_request_logger(request: Request, call_next):
             
             # 如果文本不太长，显示完整内容
             if len(full_text) <= 500:
-                response_data["_content"] = full_text if full_text else "<empty>"
+                streaming_response_data = dict(streaming_response_data)  # type: ignore
+                streaming_response_data["_content"] = full_text if full_text else "<empty>"
             else:
                 # 否则显示前500字符
-                response_data["_content_preview"] = full_text[:500] + "\n..."
-                response_data["_note"] = "Text truncated, showing first 500 chars"
+                streaming_response_data = dict(streaming_response_data)  # type: ignore
+                streaming_response_data["_content_preview"] = full_text[:500] + "\n..."
+                streaming_response_data["_note"] = "Text truncated, showing first 500 chars"
             
             api_logger.log_request_end(
                 method=method,
                 path=path,
                 status_code=response.status_code,
                 process_time=process_time,
-                response_data=response_data
+                response_data=dict(streaming_response_data)  # type: ignore
             )
         
         # 创建新的流式响应
-        from starlette.responses import StreamingResponse
         new_response = StreamingResponse(
             logging_stream_wrapper(),
             media_type=response.media_type,
@@ -141,31 +151,32 @@ async def api_request_logger(request: Request, call_next):
         return new_response
     
     # 普通响应：读取并记录响应体
-    response_data = None
     try:
-        # 获取响应体的字节内容
+        # 获取响应体的字节内容（安全地读取 body_iterator）
         response_body = b""
-        async for chunk in response.body_iterator:
-            response_body += chunk
+        
+        # 检查 body_iterator 是否存在
+        if hasattr(response, 'body_iterator'):
+            async for resp_chunk in response.body_iterator:
+                response_body += resp_chunk
+        elif hasattr(response, 'body'):
+            # 备用方案：直接读取 body 属性
+            response_body = response.body if isinstance(response.body, bytes) else b""
         
         # 尝试解析 JSON
+        response_data: Mapping[str, object] = {}  # type: ignore
         if response_body:
             try:
                 response_data = json.loads(response_body.decode('utf-8'))
-            except Exception as parse_error:
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 # 如果不是 JSON，可能是其他格式
-                try:
-                    text_preview = response_body.decode('utf-8')[:200]
-                    response_data = {"_type": "Non-JSON response", "_preview": text_preview}
-                except:
-                    response_data = {"_type": "Binary response", "_size": len(response_body)}
+                text_preview = response_body.decode('utf-8', errors='ignore')[:200]
+                response_data = {"_type": "Non-JSON response", "_preview": text_preview}
         else:
             # 空响应体
             response_data = {"_note": "Empty response body"}
         
         # 重新构造响应（因为 body_iterator 已被消费）
-        from starlette.responses import Response
-        
         new_response = Response(
             content=response_body,
             status_code=response.status_code,
