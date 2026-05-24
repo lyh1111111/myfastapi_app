@@ -45,8 +45,8 @@ class UserInfoBase(BaseModel):
     nickname: Optional[str] = Field(None, max_length=50, description="昵称")
     # 定义个人简介字段可选最大长度500字符
     bio: Optional[str] = Field(None, max_length=500, description="个人简介")
-    # 定义头像URL字段可选最大长度255字符
-    avatar: Optional[str] = Field(None, max_length=255, description="头像")
+    # 定义头像URL字段可选（支持Base64，不限制长度）
+    avatar: Optional[str] = Field(None, description="头像")
     # 定义性别字段可选最大长度10字符
     gender: Optional[str] = Field(None, max_length=10, description="性别")
     # 定义手机号字段可选最大长度11字符
