@@ -2,6 +2,12 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import { apiConfig } from '../../config/api'
 
+const normalizeNewsItem = (item) => ({
+  ...item,
+  categoryId: item.categoryId ?? item.category_id,
+  publishTime: item.publishTime ?? item.publish_time,
+})
+
 export const useNewsStore = defineStore('news', {
   state: () => ({
     newsList: [],
@@ -9,6 +15,7 @@ export const useNewsStore = defineStore('news', {
     categories: [],
     currentCategory: 1,
     loading: false,
+    requestLoading: false,
     refreshing: false,
     finished: false,
     categoriesLoading: false
@@ -61,12 +68,15 @@ export const useNewsStore = defineStore('news', {
     
     // 获取新闻列表
     async getNewsList(isRefresh = false) {
+      if (this.requestLoading) return
+
       if (isRefresh) {
         this.refreshing = true
         this.newsList = []
         this.finished = false
       }
       
+      this.requestLoading = true
       this.loading = true
       
       try {
@@ -104,20 +114,24 @@ export const useNewsStore = defineStore('news', {
         const response = await axios.get(`${apiConfig.baseURL}/api/news/list`, { params });
         
         if (response.data && response.data.code === 200) {
-          const newsData = response.data.data.list;
+          const responseData = response.data.data || {}
+          const newsData = responseData.list || responseData.items || []
+          const normalizedNewsData = newsData.map(normalizeNewsItem)
           
           // 更新新闻列表
-          this.newsList = isRefresh ? newsData : [...this.newsList, ...newsData];
+          this.newsList = isRefresh ? normalizedNewsData : [...this.newsList, ...normalizedNewsData];
           
           // 判断是否加载完成
-          if (newsData.length < params.pageSize) {
+          if (responseData.hasMore === false || normalizedNewsData.length < params.pageSize) {
             this.finished = true;
           }
         }
 
       } catch (error) {
         console.error('获取新闻列表失败:', error)
+        this.finished = true
       } finally {
+        this.requestLoading = false
         this.loading = false
         this.refreshing = false
       }
@@ -135,7 +149,7 @@ export const useNewsStore = defineStore('news', {
         
         if (response.data && response.data.code === 200) {
           // 设置新闻详情数据
-          this.newsDetail = response.data.data;
+          this.newsDetail = normalizeNewsItem(response.data.data);
           return;
         } else {
           console.error('获取新闻详情失败: 接口返回错误');

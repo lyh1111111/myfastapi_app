@@ -68,6 +68,8 @@ onMounted(async () => {
     
     // 使用新的 getUserInfoDetail 方法
     const result = await userStore.getUserInfoDetail();
+
+      console.log('获取用户信息成功:', result);
     
     // 手动关闭加载提示
     loadingInstance.close();

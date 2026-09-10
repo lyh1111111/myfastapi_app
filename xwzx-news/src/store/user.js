@@ -2,6 +2,10 @@ import { defineStore } from 'pinia';
 import axios from 'axios';
 import { apiConfig } from '../config/api';
 
+const isSuccessCode = (code) => String(code) === '200';
+
+const getResponseMessage = (data, fallback) => data?.message || data?.msg || fallback;
+
 export const useUserStore = defineStore('user', {
   state: () => ({
     userInfo: null,
@@ -27,9 +31,9 @@ export const useUserStore = defineStore('user', {
         });
         
         // 检查响应状态
-        if (response.data && response.data.code === 200) {
+        if (response.data && isSuccessCode(response.data.code)) {
           // 登录成功
-          const userInfo = response.data.data.userInfo;
+          const userInfo = response.data.data.userInfo || response.data.data.user_info;
           const token = response.data.data.token;
           
           this.userInfo = userInfo;
@@ -44,14 +48,14 @@ export const useUserStore = defineStore('user', {
           // 登录失败
           return {
             success: false,
-            message: response.data.message || '登录失败'
+            message: getResponseMessage(response.data, '登录失败')
           };
         }
       } catch (error) {
         console.error('登录请求失败:', error);
         return {
           success: false,
-          message: error.response?.data?.message || '登录请求失败，请稍后再试'
+          message: getResponseMessage(error.response?.data, '登录请求失败，请稍后再试')
         };
       }
     },
@@ -65,9 +69,9 @@ export const useUserStore = defineStore('user', {
         });
         
         // 检查响应状态
-        if (response.data && response.data.code === 200) {
+        if (response.data && isSuccessCode(response.data.code)) {
           // 注册成功，自动登录
-          const userInfo = response.data.data.userInfo;
+          const userInfo = response.data.data.userInfo || response.data.data.user_info;
           const token = response.data.data.token;
           
           this.userInfo = userInfo;
@@ -82,14 +86,14 @@ export const useUserStore = defineStore('user', {
           // 注册失败
           return {
             success: false,
-            message: response.data.message || '注册失败'
+            message: getResponseMessage(response.data, '注册失败')
           };
         }
       } catch (error) {
         console.error('注册请求失败:', error);
         return {
           success: false,
-          message: error.response?.data?.message || '注册请求失败，请稍后再试'
+          message: getResponseMessage(error.response?.data, '注册请求失败，请稍后再试')
         };
       }
     },
@@ -120,7 +124,7 @@ export const useUserStore = defineStore('user', {
         });
         
         // 检查响应状态
-        if (response.data && response.data.code === 200) {
+        if (response.data && isSuccessCode(response.data.code)) {
           // 更新用户信息
           this.userInfo = response.data.data;
           
@@ -132,14 +136,14 @@ export const useUserStore = defineStore('user', {
         } else {
           return {
             success: false,
-            message: response.data.message || '获取用户信息失败'
+            message: getResponseMessage(response.data, '获取用户信息失败')
           };
         }
       } catch (error) {
         console.error('获取用户信息请求失败:', error);
         return {
           success: false,
-          message: error.response?.data?.message || '获取用户信息请求失败，请稍后再试'
+          message: getResponseMessage(error.response?.data, '获取用户信息请求失败，请稍后再试')
         };
       }
     },
@@ -166,7 +170,7 @@ export const useUserStore = defineStore('user', {
         );
         
         // 检查响应状态
-        if (response.data && response.data.code === 200) {
+        if (response.data &&  response.data.code === 200 || response.data.code === '200') {
           // 更新本地用户简介
           this.userInfo.bio = bio;
           
@@ -214,7 +218,7 @@ export const useUserStore = defineStore('user', {
         );
         
         // 检查响应状态
-        if (response.data && response.data.code === 200) {
+        if (response.data && response.data.code === 200 || response.data.code === '200') {
           return {
             success: true,
             message: '密码修改成功'
